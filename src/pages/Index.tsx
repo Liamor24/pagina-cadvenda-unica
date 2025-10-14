@@ -130,7 +130,7 @@ const Index = () => {
         </div>
 
         {/* Sales List */}
-        <SalesList sales={filteredSales} onDeleteSale={handleDeleteSale} />
+        <SalesList sales={sales} onDeleteSale={handleDeleteSale} />
       </main>
 
       {/* Footer */}
