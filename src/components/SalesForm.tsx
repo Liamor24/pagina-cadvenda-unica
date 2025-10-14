@@ -91,11 +91,36 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
   const handleInstallmentValueChange = (index: number, value: string) => {
     const newValues = [...installmentValues];
     newValues[index] = value;
-    setInstallmentValues(newValues);
     
     // Marca como editado manualmente
     const newEdited = [...manuallyEditedInstallments];
     newEdited[index] = true;
+    
+    // Calcular total já comprometido (parcelas editadas)
+    let totalCommitted = 0;
+    newValues.forEach((val, i) => {
+      if (i === index || newEdited[i]) {
+        totalCommitted += parseFloat(val || "0");
+      }
+    });
+    
+    // Calcular valor restante
+    const remaining = totalSaleValue - totalCommitted;
+    
+    // Contar parcelas não editadas após a atual
+    const unEditedCount = newValues.slice(index + 1).filter((_, i) => !newEdited[index + 1 + i]).length;
+    
+    // Distribuir valor restante entre parcelas não editadas
+    if (unEditedCount > 0 && remaining > 0) {
+      const valuePerInstallment = (remaining / unEditedCount).toFixed(2);
+      for (let i = index + 1; i < newValues.length; i++) {
+        if (!newEdited[i]) {
+          newValues[i] = valuePerInstallment;
+        }
+      }
+    }
+    
+    setInstallmentValues(newValues);
     setManuallyEditedInstallments(newEdited);
   };
 
