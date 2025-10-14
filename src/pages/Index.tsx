@@ -3,9 +3,12 @@ import { SalesForm, type Sale } from "@/components/SalesForm";
 import { SalesList } from "@/components/SalesList";
 import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/ellas-logo.jpeg";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 const Index = () => {
   const [sales, setSales] = useState<Sale[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<string>("total");
 
   const handleSaleAdded = (sale: Sale) => {
     setSales([sale, ...sales]);
@@ -19,12 +22,43 @@ const Index = () => {
     });
   };
 
-  const totalProfit = sales.reduce((sum, sale) => {
+  // Função para filtrar vendas por mês
+  const filterSalesByMonth = (sales: Sale[]) => {
+    if (selectedMonth === "total") return sales;
+    
+    return sales.filter(sale => {
+      const paymentDate = new Date(sale.paymentDate);
+      const saleMonth = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}`;
+      return saleMonth === selectedMonth;
+    });
+  };
+
+  const filteredSales = filterSalesByMonth(sales);
+
+  // Gerar lista de meses disponíveis das vendas
+  const availableMonths = Array.from(new Set(
+    sales.map(sale => {
+      const date = new Date(sale.paymentDate);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    })
+  )).sort().reverse();
+
+  const monthNames = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+  ];
+
+  const getMonthLabel = (monthValue: string) => {
+    const [year, month] = monthValue.split('-');
+    return `${monthNames[parseInt(month) - 1]} ${year}`;
+  };
+
+  const totalProfit = filteredSales.reduce((sum, sale) => {
     const saleProfit = sale.products.reduce((p, product) => p + (product.saleValue - product.purchaseValue), 0);
     return sum + saleProfit;
   }, 0);
   
-  const totalSales = sales.reduce((sum, sale) => {
+  const totalSales = filteredSales.reduce((sum, sale) => {
     const saleTotal = sale.products.reduce((p, product) => p + product.saleValue, 0);
     return sum + saleTotal;
   }, 0);
@@ -50,12 +84,32 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
+        {/* Filter */}
+        {sales.length > 0 && (
+          <div className="mb-6 max-w-xs">
+            <Label htmlFor="month-filter" className="text-foreground mb-2 block">Filtrar por mês</Label>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger id="month-filter" className="bg-card">
+                <SelectValue placeholder="Selecione o mês" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="total">Total (Todos os meses)</SelectItem>
+                {availableMonths.map(month => (
+                  <SelectItem key={month} value={month}>
+                    {getMonthLabel(month)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         {/* Statistics Cards */}
         {sales.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <div className="bg-gradient-to-br from-card to-primary/5 p-6 rounded-xl shadow-[var(--shadow-card)] border border-border">
               <p className="text-sm text-muted-foreground mb-1">Total de Vendas</p>
-              <p className="text-3xl font-bold text-foreground">{sales.length}</p>
+              <p className="text-3xl font-bold text-foreground">{filteredSales.length}</p>
             </div>
             <div className="bg-gradient-to-br from-card to-accent/5 p-6 rounded-xl shadow-[var(--shadow-card)] border border-border">
               <p className="text-sm text-muted-foreground mb-1">Valor Total</p>
@@ -76,7 +130,7 @@ const Index = () => {
         </div>
 
         {/* Sales List */}
-        <SalesList sales={sales} onDeleteSale={handleDeleteSale} />
+        <SalesList sales={filteredSales} onDeleteSale={handleDeleteSale} />
       </main>
 
       {/* Footer */}
