@@ -23,6 +23,7 @@ export interface Sale {
   paymentMethod: "pix" | "installment";
   installments?: number;
   installmentValues?: number[];
+  advancePayment?: number;
   products: Product[];
 }
 
@@ -50,6 +51,7 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
   const [installments, setInstallments] = useState(1);
   const [installmentValues, setInstallmentValues] = useState<string[]>([""]);
   const [manuallyEditedInstallments, setManuallyEditedInstallments] = useState<boolean[]>([false]);
+  const [advancePayment, setAdvancePayment] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
 
@@ -256,6 +258,7 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
       paymentMethod,
       installments: paymentMethod === "installment" ? installments : undefined,
       installmentValues: paymentMethod === "installment" ? installmentValues.map(v => parseFloat(v)) : undefined,
+      advancePayment: advancePayment ? parseFloat(advancePayment) : undefined,
       products: [...products],
     };
 
@@ -277,6 +280,7 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
     setInstallments(1);
     setInstallmentValues([""]);
     setManuallyEditedInstallments([false]);
+    setAdvancePayment("");
     setProducts([]);
     setEditingProductId(null);
 
@@ -523,6 +527,22 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
             )}
           </div>
         )}
+
+        <div className="mt-6">
+          <Label htmlFor="advancePayment" className="text-foreground">Entrada / Adiantamento (Opcional)</Label>
+          <Input
+            id="advancePayment"
+            type="number"
+            step="0.01"
+            value={advancePayment}
+            onChange={(e) => setAdvancePayment(e.target.value)}
+            className="mt-1 max-w-xs"
+            placeholder="R$ 0,00"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Valor recebido antecipadamente pelo cliente
+          </p>
+        </div>
       </Card>
 
       {customerName && products.length > 0 && (
@@ -547,6 +567,12 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
                 R$ {totalProfit.toFixed(2)}
               </span>
             </div>
+            {advancePayment && parseFloat(advancePayment) > 0 && (
+              <div className="flex justify-between pt-3 border-t border-border">
+                <span className="text-muted-foreground">Entrada/Adiantamento:</span>
+                <span className="font-semibold text-green-600">R$ {parseFloat(advancePayment).toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between pt-3 border-t border-border">
               <span className="text-muted-foreground">Parcela do Mês:</span>
               <span className="font-bold text-lg text-foreground">

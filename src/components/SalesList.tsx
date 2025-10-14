@@ -116,6 +116,11 @@ export const SalesList = ({ sales, onDeleteSale }: SalesListProps) => {
               <div>
                 <span className="font-medium">Valor Total de Venda:</span> R$ {totalSaleValue.toFixed(2)}
               </div>
+              {sale.advancePayment && sale.advancePayment > 0 && (
+                <div>
+                  <span className="font-medium">Entrada/Adiantamento:</span> <span className="text-green-600">R$ {sale.advancePayment.toFixed(2)}</span>
+                </div>
+              )}
             </div>
 
             {sale.paymentMethod === "installment" && sale.installmentValues && (
