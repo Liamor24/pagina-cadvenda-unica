@@ -49,6 +49,7 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "installment">("pix");
   const [installments, setInstallments] = useState(1);
   const [installmentValues, setInstallmentValues] = useState<string[]>([""]);
+  const [manuallyEditedInstallments, setManuallyEditedInstallments] = useState<boolean[]>([false]);
   const [products, setProducts] = useState<Product[]>([]);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
 
@@ -60,13 +61,42 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
 
   const handleInstallmentsChange = (num: number) => {
     setInstallments(num);
-    setInstallmentValues(Array(num).fill(""));
+    const currentEdited = [...manuallyEditedInstallments];
+    
+    // Se diminuiu o número de parcelas, remove os editados extras
+    if (num < currentEdited.length) {
+      setManuallyEditedInstallments(currentEdited.slice(0, num));
+    } else {
+      // Se aumentou, adiciona false para as novas parcelas
+      setManuallyEditedInstallments([...currentEdited, ...Array(num - currentEdited.length).fill(false)]);
+    }
+    
+    // Calcular valor igual para parcelas não editadas
+    if (totalSaleValue > 0) {
+      const valuePerInstallment = (totalSaleValue / num).toFixed(2);
+      const newValues = Array(num).fill("").map((_, i) => {
+        // Se foi editado manualmente, mantém o valor
+        if (manuallyEditedInstallments[i]) {
+          return installmentValues[i] || "";
+        }
+        // Se não foi editado, preenche automaticamente
+        return valuePerInstallment;
+      });
+      setInstallmentValues(newValues);
+    } else {
+      setInstallmentValues(Array(num).fill(""));
+    }
   };
 
   const handleInstallmentValueChange = (index: number, value: string) => {
     const newValues = [...installmentValues];
     newValues[index] = value;
     setInstallmentValues(newValues);
+    
+    // Marca como editado manualmente
+    const newEdited = [...manuallyEditedInstallments];
+    newEdited[index] = true;
+    setManuallyEditedInstallments(newEdited);
   };
 
   const handleAddProduct = () => {
@@ -98,7 +128,25 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
         purchaseValue: parseFloat(purchaseValue),
         saleValue: parseFloat(saleValue),
       };
-      setProducts([...products, newProduct]);
+      const newProducts = [...products, newProduct];
+      setProducts(newProducts);
+      
+      // Atualizar parcelas automaticamente se não foram editadas manualmente
+      if (paymentMethod === "installment" && installments > 0) {
+        const newTotalSaleValue = newProducts.reduce((sum, p) => sum + p.saleValue, 0);
+        const valuePerInstallment = (newTotalSaleValue / installments).toFixed(2);
+        
+        const newValues = installmentValues.map((val, i) => {
+          // Se foi editado manualmente, mantém o valor
+          if (manuallyEditedInstallments[i]) {
+            return val;
+          }
+          // Se não foi editado, atualiza automaticamente
+          return valuePerInstallment;
+        });
+        setInstallmentValues(newValues);
+      }
+      
       toast({
         title: "Produto adicionado!",
         description: "O produto foi adicionado à lista.",
@@ -120,7 +168,25 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
   };
 
   const handleDeleteProduct = (productId: string) => {
-    setProducts(products.filter(p => p.id !== productId));
+    const newProducts = products.filter(p => p.id !== productId);
+    setProducts(newProducts);
+    
+    // Atualizar parcelas automaticamente se não foram editadas manualmente
+    if (paymentMethod === "installment" && installments > 0 && newProducts.length > 0) {
+      const newTotalSaleValue = newProducts.reduce((sum, p) => sum + p.saleValue, 0);
+      const valuePerInstallment = (newTotalSaleValue / installments).toFixed(2);
+      
+      const newValues = installmentValues.map((val, i) => {
+        // Se foi editado manualmente, mantém o valor
+        if (manuallyEditedInstallments[i]) {
+          return val;
+        }
+        // Se não foi editado, atualiza automaticamente
+        return valuePerInstallment;
+      });
+      setInstallmentValues(newValues);
+    }
+    
     toast({
       title: "Produto removido!",
       description: "O produto foi removido da lista.",
@@ -185,6 +251,7 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
     setPaymentMethod("pix");
     setInstallments(1);
     setInstallmentValues([""]);
+    setManuallyEditedInstallments([false]);
     setProducts([]);
     setEditingProductId(null);
 
