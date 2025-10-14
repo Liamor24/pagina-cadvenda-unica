@@ -106,33 +106,26 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
     const advance = parseFloat(advancePayment || "0");
     const remainingValue = totalSaleValue - advance;
     
-    // Calcular total já comprometido (parcelas editadas, exceto a última)
+    // Calcular total já comprometido (parcelas editadas)
     let totalCommitted = 0;
     newValues.forEach((val, i) => {
-      if (i < newValues.length - 1 && (i === index || newEdited[i])) {
+      if (i === index || newEdited[i]) {
         totalCommitted += parseFloat(val || "0");
       }
     });
     
-    // A última parcela sempre recebe o saldo restante
-    const lastInstallmentValue = remainingValue - totalCommitted;
-    newValues[newValues.length - 1] = lastInstallmentValue > 0 ? lastInstallmentValue.toFixed(2) : "0.00";
+    // Calcular valor restante para distribuir
+    const remaining = remainingValue - totalCommitted;
     
-    // Se não for a última parcela, distribui entre as intermediárias não editadas
-    if (index < newValues.length - 1) {
-      // Calcular valor restante para distribuir entre parcelas intermediárias
-      const remaining = remainingValue - totalCommitted - lastInstallmentValue;
-      
-      // Contar parcelas não editadas entre a atual e a última
-      const unEditedCount = newValues.slice(index + 1, -1).filter((_, i) => !newEdited[index + 1 + i]).length;
-      
-      // Distribuir valor restante entre parcelas intermediárias não editadas
-      if (unEditedCount > 0 && remaining > 0) {
-        const valuePerInstallment = (remaining / unEditedCount).toFixed(2);
-        for (let i = index + 1; i < newValues.length - 1; i++) {
-          if (!newEdited[i]) {
-            newValues[i] = valuePerInstallment;
-          }
+    // Contar parcelas não editadas após a atual
+    const unEditedCount = newValues.slice(index + 1).filter((_, i) => !newEdited[index + 1 + i]).length;
+    
+    // Distribuir valor restante entre parcelas não editadas
+    if (unEditedCount > 0 && remaining > 0) {
+      const valuePerInstallment = (remaining / unEditedCount).toFixed(2);
+      for (let i = index + 1; i < newValues.length; i++) {
+        if (!newEdited[i]) {
+          newValues[i] = valuePerInstallment;
         }
       }
     }
@@ -555,31 +548,19 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
 
             <div className="space-y-3">
               <Label>Valor de Cada Parcela</Label>
-              {Array.from({ length: installments }).map((_, index) => {
-                const isLastInstallment = index === installments - 1;
-                const lastInstallmentValue = parseFloat(installmentValues[index] || "0");
-                
-                return (
-                  <div key={index} className="flex items-center gap-3">
-                    <span className="text-sm font-medium min-w-[80px]">Parcela {index + 1}:</span>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={installmentValues[index] || ""}
-                      onChange={(e) => handleInstallmentValueChange(index, e.target.value)}
-                      placeholder="R$ 0,00"
-                      className="max-w-xs"
-                      disabled={isLastInstallment}
-                    />
-                    {isLastInstallment && lastInstallmentValue === 0 && (
-                      <span className="text-sm text-green-600 font-medium">Sem saldo restante</span>
-                    )}
-                    {isLastInstallment && lastInstallmentValue > 0 && (
-                      <span className="text-sm text-muted-foreground">(Saldo restante)</span>
-                    )}
-                  </div>
-                );
-              })}
+              {Array.from({ length: installments }).map((_, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <span className="text-sm font-medium min-w-[80px]">Parcela {index + 1}:</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={installmentValues[index] || ""}
+                    onChange={(e) => handleInstallmentValueChange(index, e.target.value)}
+                    placeholder="R$ 0,00"
+                    className="max-w-xs"
+                  />
+                </div>
+              ))}
             </div>
 
             {installmentValues.some(val => val) && (
