@@ -31,13 +31,21 @@ interface SalesFormProps {
 }
 
 export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
+  const today = new Date();
+  const oneMonthLater = new Date(today);
+  oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
+  
+  const formatDate = (date: Date) => {
+    return date.toISOString().split('T')[0];
+  };
+
   const [customerName, setCustomerName] = useState("");
   const [productRef, setProductRef] = useState("");
   const [productName, setProductName] = useState("");
   const [purchaseValue, setPurchaseValue] = useState("");
   const [saleValue, setSaleValue] = useState("");
-  const [purchaseDate, setPurchaseDate] = useState("");
-  const [paymentDate, setPaymentDate] = useState("");
+  const [purchaseDate, setPurchaseDate] = useState(formatDate(today));
+  const [paymentDate, setPaymentDate] = useState(formatDate(oneMonthLater));
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "installment">("pix");
   const [installments, setInstallments] = useState(1);
   const [installmentValues, setInstallmentValues] = useState<string[]>([""]);
@@ -163,13 +171,17 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
     onSaleAdded(newSale);
 
     // Reset form
+    const newToday = new Date();
+    const newOneMonthLater = new Date(newToday);
+    newOneMonthLater.setMonth(newOneMonthLater.getMonth() + 1);
+    
     setCustomerName("");
     setProductRef("");
     setProductName("");
     setPurchaseValue("");
     setSaleValue("");
-    setPurchaseDate("");
-    setPaymentDate("");
+    setPurchaseDate(formatDate(newToday));
+    setPaymentDate(formatDate(newOneMonthLater));
     setPaymentMethod("pix");
     setInstallments(1);
     setInstallmentValues([""]);
