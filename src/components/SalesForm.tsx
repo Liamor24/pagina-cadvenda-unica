@@ -429,17 +429,24 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
               const productProfit = product.saleValue - product.purchaseValue;
               return (
                 <div key={product.id} className="p-4 rounded-lg bg-muted border border-border">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
+                  <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-4 items-center">
+                    <div>
                       <p className="font-semibold text-foreground">{product.productName}</p>
                       <p className="text-sm text-muted-foreground">Ref: {product.productRef}</p>
-                      <div className="flex gap-4 mt-2 text-sm">
-                        <span>Compra: R$ {product.purchaseValue.toFixed(2)}</span>
-                        <span>Venda: R$ {product.saleValue.toFixed(2)}</span>
-                        <span className={productProfit >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          Lucro: R$ {productProfit.toFixed(2)}
-                        </span>
-                      </div>
+                    </div>
+                    <div className="text-sm">
+                      <p className="text-muted-foreground">Compra</p>
+                      <p className="font-semibold">R$ {product.purchaseValue.toFixed(2)}</p>
+                    </div>
+                    <div className="text-sm">
+                      <p className="text-muted-foreground">Venda</p>
+                      <p className="font-semibold">R$ {product.saleValue.toFixed(2)}</p>
+                    </div>
+                    <div className="text-sm">
+                      <p className="text-muted-foreground">Lucro</p>
+                      <p className={`font-semibold ${productProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        R$ {productProfit.toFixed(2)}
+                      </p>
                     </div>
                     <div className="flex gap-2">
                       <Button
