@@ -73,9 +73,13 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
       setManuallyEditedInstallments([...currentEdited, ...Array(num - currentEdited.length).fill(false)]);
     }
     
+    // Calcular valor restante após adiantamento
+    const advance = parseFloat(advancePayment || "0");
+    const remainingValue = totalSaleValue - advance;
+    
     // Calcular valor igual para parcelas não editadas
-    if (totalSaleValue > 0) {
-      const valuePerInstallment = (totalSaleValue / num).toFixed(2);
+    if (remainingValue > 0) {
+      const valuePerInstallment = (remainingValue / num).toFixed(2);
       const newValues = Array(num).fill("").map((_, i) => {
         // Se foi editado manualmente, mantém o valor
         if (manuallyEditedInstallments[i]) {
@@ -98,6 +102,10 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
     const newEdited = [...manuallyEditedInstallments];
     newEdited[index] = true;
     
+    // Calcular valor restante após adiantamento
+    const advance = parseFloat(advancePayment || "0");
+    const remainingValue = totalSaleValue - advance;
+    
     // Calcular total já comprometido (parcelas editadas)
     let totalCommitted = 0;
     newValues.forEach((val, i) => {
@@ -106,8 +114,8 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
       }
     });
     
-    // Calcular valor restante
-    const remaining = totalSaleValue - totalCommitted;
+    // Calcular valor restante para distribuir
+    const remaining = remainingValue - totalCommitted;
     
     // Contar parcelas não editadas após a atual
     const unEditedCount = newValues.slice(index + 1).filter((_, i) => !newEdited[index + 1 + i]).length;
@@ -161,7 +169,9 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
       // Atualizar parcelas automaticamente se não foram editadas manualmente
       if (paymentMethod === "installment" && installments > 0) {
         const newTotalSaleValue = newProducts.reduce((sum, p) => sum + p.saleValue, 0);
-        const valuePerInstallment = (newTotalSaleValue / installments).toFixed(2);
+        const advance = parseFloat(advancePayment || "0");
+        const remainingValue = newTotalSaleValue - advance;
+        const valuePerInstallment = (remainingValue / installments).toFixed(2);
         
         const newValues = installmentValues.map((val, i) => {
           // Se foi editado manualmente, mantém o valor
@@ -201,7 +211,9 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
     // Atualizar parcelas automaticamente se não foram editadas manualmente
     if (paymentMethod === "installment" && installments > 0 && newProducts.length > 0) {
       const newTotalSaleValue = newProducts.reduce((sum, p) => sum + p.saleValue, 0);
-      const valuePerInstallment = (newTotalSaleValue / installments).toFixed(2);
+      const advance = parseFloat(advancePayment || "0");
+      const remainingValue = newTotalSaleValue - advance;
+      const valuePerInstallment = (remainingValue / installments).toFixed(2);
       
       const newValues = installmentValues.map((val, i) => {
         // Se foi editado manualmente, mantém o valor
@@ -488,6 +500,38 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
           </div>
         </RadioGroup>
 
+        <div className="mt-6">
+          <Label htmlFor="advancePayment" className="text-foreground">Entrada / Adiantamento (Opcional)</Label>
+          <Input
+            id="advancePayment"
+            type="number"
+            step="0.01"
+            value={advancePayment}
+            onChange={(e) => {
+              setAdvancePayment(e.target.value);
+              // Recalcular parcelas quando mudar o adiantamento
+              if (paymentMethod === "installment" && installments > 0 && totalSaleValue > 0) {
+                const advance = parseFloat(e.target.value || "0");
+                const remainingValue = totalSaleValue - advance;
+                const valuePerInstallment = (remainingValue / installments).toFixed(2);
+                
+                const newValues = installmentValues.map((val, i) => {
+                  if (manuallyEditedInstallments[i]) {
+                    return val;
+                  }
+                  return valuePerInstallment;
+                });
+                setInstallmentValues(newValues);
+              }
+            }}
+            className="mt-1 max-w-xs"
+            placeholder="R$ 0,00"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Valor recebido antecipadamente, será abatido do total
+          </p>
+        </div>
+
         {paymentMethod === "installment" && (
           <div className="mt-6 space-y-4">
             <div>
@@ -527,22 +571,6 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
             )}
           </div>
         )}
-
-        <div className="mt-6">
-          <Label htmlFor="advancePayment" className="text-foreground">Entrada / Adiantamento (Opcional)</Label>
-          <Input
-            id="advancePayment"
-            type="number"
-            step="0.01"
-            value={advancePayment}
-            onChange={(e) => setAdvancePayment(e.target.value)}
-            className="mt-1 max-w-xs"
-            placeholder="R$ 0,00"
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Valor recebido antecipadamente pelo cliente
-          </p>
-        </div>
       </Card>
 
       {customerName && products.length > 0 && (
