@@ -429,24 +429,26 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
               const productProfit = product.saleValue - product.purchaseValue;
               return (
                 <div key={product.id} className="p-4 rounded-lg bg-muted border border-border">
-                  <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-4 items-center">
-                    <div>
-                      <p className="font-semibold text-foreground">{product.productName}</p>
-                      <p className="text-sm text-muted-foreground">Ref: {product.productRef}</p>
-                    </div>
-                    <div className="text-sm">
-                      <p className="text-muted-foreground">Compra</p>
-                      <p className="font-semibold">R$ {product.purchaseValue.toFixed(2)}</p>
-                    </div>
-                    <div className="text-sm">
-                      <p className="text-muted-foreground">Venda</p>
-                      <p className="font-semibold">R$ {product.saleValue.toFixed(2)}</p>
-                    </div>
-                    <div className="text-sm">
-                      <p className="text-muted-foreground">Lucro</p>
-                      <p className={`font-semibold ${productProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        R$ {productProfit.toFixed(2)}
-                      </p>
+                  <div className="flex items-center justify-between gap-6">
+                    <div className="flex items-center gap-6 flex-1">
+                      <div>
+                        <p className="font-semibold text-foreground">{product.productName}</p>
+                        <p className="text-sm text-muted-foreground">Ref: {product.productRef}</p>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Compra: </span>
+                        <span className="font-semibold">R$ {product.purchaseValue.toFixed(2)}</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Venda: </span>
+                        <span className="font-semibold">R$ {product.saleValue.toFixed(2)}</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Lucro: </span>
+                        <span className={`font-semibold ${productProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          R$ {productProfit.toFixed(2)}
+                        </span>
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <Button
