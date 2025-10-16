@@ -60,17 +60,26 @@ export const SalesList = ({ sales, onDeleteSale }: SalesListProps) => {
                 const productProfit = product.saleValue - product.purchaseValue;
                 return (
                   <div key={product.id} className="p-3 rounded-lg bg-muted/50 border border-border">
-                    <div className="flex justify-between items-start">
-                      <div>
+                    <div className="flex justify-between items-center gap-4">
+                      <div className="flex-1 min-w-0">
                         <p className="font-medium text-foreground">{product.productName}</p>
                         <p className="text-xs text-muted-foreground">Ref: {product.productRef}</p>
                       </div>
-                      <div className="text-right text-sm">
-                        <p className="text-muted-foreground">Compra: R$ {product.purchaseValue.toFixed(2)}</p>
-                        <p className="text-muted-foreground">Venda: R$ {product.saleValue.toFixed(2)}</p>
-                        <p className={`font-semibold ${productProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          Lucro: R$ {productProfit.toFixed(2)}
-                        </p>
+                      <div className="flex items-center gap-4 shrink-0">
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">Compra</p>
+                          <p className="font-medium text-foreground">R$ {product.purchaseValue.toFixed(2)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">Venda</p>
+                          <p className="font-medium text-foreground">R$ {product.saleValue.toFixed(2)}</p>
+                        </div>
+                        <div className="text-right min-w-[100px]">
+                          <p className="text-xs text-muted-foreground">Lucro</p>
+                          <p className={`font-medium ${productProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            R$ {productProfit.toFixed(2)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
