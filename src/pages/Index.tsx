@@ -35,13 +35,13 @@ const Index = () => {
 
   const filteredSales = filterSalesByMonth(sales);
 
-  // Gerar lista de meses disponíveis das vendas
+  // Gerar lista de meses disponíveis das vendas (ordem cronológica)
   const availableMonths = Array.from(new Set(
     sales.map(sale => {
       const date = new Date(sale.paymentDate);
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     })
-  )).sort().reverse();
+  )).sort();
 
   const monthNames = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",

@@ -127,11 +127,17 @@ export const SalesList = ({ sales, onDeleteSale }: SalesListProps) => {
               <div className="mt-4 p-3 rounded-lg bg-accent/10 border border-accent/20">
                 <p className="text-sm font-medium text-foreground mb-2">Detalhes das Parcelas:</p>
                 <div className="flex flex-wrap gap-2">
-                  {sale.installmentValues.map((value, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {index + 1}ª: R$ {value.toFixed(2)}
-                    </Badge>
-                  ))}
+                  {sale.installmentValues.map((value, index) => {
+                    const installmentDate = sale.installmentDates?.[index];
+                    const formattedDate = installmentDate 
+                      ? new Date(installmentDate).toLocaleDateString('pt-BR')
+                      : '';
+                    return (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {index + 1}ª {formattedDate && `(${formattedDate})`}: R$ {value.toFixed(2)}
+                      </Badge>
+                    );
+                  })}
                 </div>
               </div>
             )}

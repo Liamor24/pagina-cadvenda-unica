@@ -23,6 +23,7 @@ export interface Sale {
   paymentMethod: "pix" | "installment";
   installments?: number;
   installmentValues?: number[];
+  installmentDates?: string[];
   advancePayment?: number;
   products: Product[];
 }
@@ -38,6 +39,19 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
   
   const formatDate = (date: Date) => {
     return date.toISOString().split('T')[0];
+  };
+
+  const calculateInstallmentDates = (firstPaymentDate: string, numberOfInstallments: number): string[] => {
+    const dates: string[] = [];
+    const baseDate = new Date(firstPaymentDate);
+    
+    for (let i = 0; i < numberOfInstallments; i++) {
+      const installmentDate = new Date(baseDate);
+      installmentDate.setMonth(baseDate.getMonth() + i);
+      dates.push(installmentDate.toISOString().split('T')[0]);
+    }
+    
+    return dates;
   };
 
   const [customerName, setCustomerName] = useState("");
@@ -270,6 +284,7 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
       paymentMethod,
       installments: paymentMethod === "installment" ? installments : undefined,
       installmentValues: paymentMethod === "installment" ? installmentValues.map(v => parseFloat(v)) : undefined,
+      installmentDates: paymentMethod === "installment" ? calculateInstallmentDates(paymentDate, installments) : undefined,
       advancePayment: advancePayment ? parseFloat(advancePayment) : undefined,
       products: [...products],
     };
@@ -347,9 +362,9 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
             />
           </div>
         </div>
-      </Card>
 
-      <Card className="p-6 shadow-[var(--shadow-card)] border-border transition-[var(--transition-smooth)] hover:shadow-[var(--shadow-elegant)]">
+        <div className="border-t border-border my-6"></div>
+
         <h3 className="text-xl font-semibold mb-4 text-foreground">Produtos</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -493,9 +508,9 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
             </div>
           </div>
         )}
-      </Card>
 
-      <Card className="p-6 shadow-[var(--shadow-card)] border-border transition-[var(--transition-smooth)] hover:shadow-[var(--shadow-elegant)]">
+        <div className="border-t border-border my-6"></div>
+
         <h3 className="text-xl font-semibold mb-4 text-foreground">Forma de Pagamento</h3>
         
         <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as "pix" | "installment")}>
