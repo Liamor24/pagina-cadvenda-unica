@@ -7,9 +7,10 @@ import { Calendar, TrendingUp, DollarSign, Trash2 } from "lucide-react";
 interface SalesListProps {
   sales: Sale[];
   onDeleteSale: (saleId: string) => void;
+  onEditSale: (sale: Sale) => void;
 }
 
-export const SalesList = ({ sales, onDeleteSale }: SalesListProps) => {
+export const SalesList = ({ sales, onDeleteSale, onEditSale }: SalesListProps) => {
   if (sales.length === 0) {
     return (
       <Card className="p-12 text-center shadow-[var(--shadow-card)]">
@@ -44,6 +45,13 @@ export const SalesList = ({ sales, onDeleteSale }: SalesListProps) => {
                 <Badge variant={sale.paymentMethod === "pix" ? "default" : "secondary"} className="w-fit">
                   {sale.paymentMethod === "pix" ? "PIX" : `${sale.installments}x`}
                 </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onEditSale(sale)}
+                >
+                  Editar
+                </Button>
                 <Button
                   variant="destructive"
                   size="sm"

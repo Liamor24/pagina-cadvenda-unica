@@ -30,9 +30,11 @@ export interface Sale {
 
 interface SalesFormProps {
   onSaleAdded: (sale: Sale) => void;
+  editingSale?: Sale | null;
+  onSaleUpdated?: (sale: Sale) => void;
 }
 
-export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
+export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesFormProps) => {
   const today = new Date();
   const oneMonthLater = new Date(today);
   oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
@@ -68,6 +70,24 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
   const [advancePayment, setAdvancePayment] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
+
+  // Preencher formulário quando editingSale mudar
+  useState(() => {
+    if (editingSale) {
+      setCustomerName(editingSale.customerName);
+      setPurchaseDate(editingSale.purchaseDate);
+      setPaymentDate(editingSale.paymentDate);
+      setPaymentMethod(editingSale.paymentMethod);
+      setProducts(editingSale.products);
+      setAdvancePayment(editingSale.advancePayment?.toString() || "");
+      
+      if (editingSale.paymentMethod === "installment" && editingSale.installments && editingSale.installmentValues) {
+        setInstallments(editingSale.installments);
+        setInstallmentValues(editingSale.installmentValues.map(v => v.toString()));
+        setManuallyEditedInstallments(Array(editingSale.installments).fill(true));
+      }
+    }
+  });
 
   const profit = parseFloat(saleValue || "0") - parseFloat(purchaseValue || "0");
   const totalInstallments = installmentValues.reduce((sum, val) => sum + parseFloat(val || "0"), 0);
@@ -276,8 +296,8 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
       return;
     }
 
-    const newSale: Sale = {
-      id: Date.now().toString(),
+    const saleData: Sale = {
+      id: editingSale?.id || Date.now().toString(),
       customerName,
       purchaseDate,
       paymentDate,
@@ -289,7 +309,11 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
       products: [...products],
     };
 
-    onSaleAdded(newSale);
+    if (editingSale && onSaleUpdated) {
+      onSaleUpdated(saleData);
+    } else {
+      onSaleAdded(saleData);
+    }
 
     // Reset form
     const newToday = new Date();
@@ -312,15 +336,17 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
     setEditingProductId(null);
 
     toast({
-      title: "Venda registrada!",
-      description: "A venda foi adicionada com sucesso.",
+      title: editingSale ? "Venda atualizada!" : "Venda registrada!",
+      description: editingSale ? "A venda foi atualizada com sucesso." : "A venda foi adicionada com sucesso.",
     });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <Card className="p-6 shadow-[var(--shadow-card)] border-border transition-[var(--transition-smooth)] hover:shadow-[var(--shadow-elegant)]">
-        <h2 className="text-2xl font-semibold mb-6 text-foreground">Cadastro de Venda</h2>
+        <h2 className="text-2xl font-semibold mb-6 text-foreground">
+          {editingSale ? "Editar Venda" : "Cadastro de Venda"}
+        </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div className="md:col-span-2">
@@ -641,7 +667,7 @@ export const SalesForm = ({ onSaleAdded }: SalesFormProps) => {
       )}
 
       <Button type="submit" className="w-full" size="lg">
-        Cadastrar Venda
+        {editingSale ? "Atualizar Venda" : "Cadastrar Venda"}
       </Button>
     </form>
   );

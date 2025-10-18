@@ -9,9 +9,26 @@ import { Label } from "@/components/ui/label";
 const Index = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("total");
+  const [editingSale, setEditingSale] = useState<Sale | null>(null);
 
   const handleSaleAdded = (sale: Sale) => {
     setSales([sale, ...sales]);
+    setEditingSale(null);
+  };
+
+  const handleSaleUpdated = (updatedSale: Sale) => {
+    setSales(sales.map(s => s.id === updatedSale.id ? updatedSale : s));
+    setEditingSale(null);
+    toast({
+      title: "Venda atualizada!",
+      description: "A venda foi atualizada com sucesso.",
+    });
+  };
+
+  const handleEditSale = (sale: Sale) => {
+    setEditingSale(sale);
+    // Scroll para o formulário
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDeleteSale = (saleId: string) => {
@@ -126,11 +143,19 @@ const Index = () => {
 
         {/* Sales Form */}
         <div className="mb-8">
-          <SalesForm onSaleAdded={handleSaleAdded} />
+          <SalesForm 
+            onSaleAdded={handleSaleAdded} 
+            editingSale={editingSale}
+            onSaleUpdated={handleSaleUpdated}
+          />
         </div>
 
         {/* Sales List */}
-        <SalesList sales={sales} onDeleteSale={handleDeleteSale} />
+        <SalesList 
+          sales={filteredSales} 
+          onDeleteSale={handleDeleteSale}
+          onEditSale={handleEditSale}
+        />
       </main>
 
       {/* Footer */}
