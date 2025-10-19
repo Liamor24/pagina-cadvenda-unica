@@ -342,7 +342,7 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6 max-w-[70%] mx-auto">
       <Card className="p-6 shadow-[var(--shadow-card)] border-border transition-[var(--transition-smooth)] hover:shadow-[var(--shadow-elegant)]">
         <h2 className="text-2xl font-semibold mb-6 text-foreground">
           {editingSale ? "Editar Venda" : "Cadastro de Venda"}

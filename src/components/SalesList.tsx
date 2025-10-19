@@ -21,9 +21,38 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale }: SalesListProps) =
   }
 
   return (
-    <div className="space-y-4">
+    <div>
       <h2 className="text-2xl font-semibold text-foreground mb-4">Vendas Cadastradas</h2>
-      {sales.map((sale) => {
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {sales
+          .sort((a, b) => {
+            // Verificar se está quitado (todas as parcelas pagas)
+            const aQuitado = a.paymentMethod === "installment" && 
+              a.installmentDates && 
+              new Date(a.installmentDates[a.installmentDates.length - 1]) < new Date();
+            const bQuitado = b.paymentMethod === "installment" && 
+              b.installmentDates && 
+              new Date(b.installmentDates[b.installmentDates.length - 1]) < new Date();
+            
+            // Quitados vão para o final
+            if (aQuitado !== bQuitado) return aQuitado ? 1 : -1;
+            
+            // Se ambos são parcelados, compara parcelas restantes
+            if (a.paymentMethod === "installment" && b.paymentMethod === "installment") {
+              const now = new Date();
+              const aRestantes = (a.installmentDates || []).filter(d => new Date(d) > now).length;
+              const bRestantes = (b.installmentDates || []).filter(d => new Date(d) > now).length;
+              if (aRestantes !== bRestantes) return bRestantes - aRestantes;
+            }
+            
+            // Por fim, ordena por data mais recente
+            return new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime();
+          })
+          .map((sale) => {
+            // Verificar status de quitado
+            const isQuitado = sale.paymentMethod === "installment" && 
+              sale.installmentDates && 
+              new Date(sale.installmentDates[sale.installmentDates.length - 1]) < new Date();
         const totalPurchaseValue = sale.products.reduce((sum, p) => sum + p.purchaseValue, 0);
         const totalSaleValue = sale.products.reduce((sum, p) => sum + p.saleValue, 0);
         const profit = totalSaleValue - totalPurchaseValue;
@@ -34,7 +63,7 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale }: SalesListProps) =
         return (
           <Card 
             key={sale.id} 
-            className="p-6 shadow-[var(--shadow-card)] border-border transition-[var(--transition-smooth)] hover:shadow-[var(--shadow-elegant)] hover:scale-[1.01]"
+            className={`p-6 shadow-[var(--shadow-card)] border-border transition-[var(--transition-smooth)] hover:shadow-[var(--shadow-elegant)] hover:scale-[1.01] ${isQuitado ? 'bg-green-50 dark:bg-green-950/10' : ''}`}
           >
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
               <div>
@@ -45,6 +74,11 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale }: SalesListProps) =
                 <Badge variant={sale.paymentMethod === "pix" ? "default" : "secondary"} className="w-fit">
                   {sale.paymentMethod === "pix" ? "PIX" : `${sale.installments}x`}
                 </Badge>
+                {isQuitado && (
+                  <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                    Quitado
+                  </Badge>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
