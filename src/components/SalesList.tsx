@@ -53,148 +53,161 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale }: SalesListProps) =
             const isQuitado = sale.paymentMethod === "installment" && 
               sale.installmentDates && 
               new Date(sale.installmentDates[sale.installmentDates.length - 1]) < new Date();
-        const totalPurchaseValue = sale.products.reduce((sum, p) => sum + p.purchaseValue, 0);
-        const totalSaleValue = sale.products.reduce((sum, p) => sum + p.saleValue, 0);
-        const profit = totalSaleValue - totalPurchaseValue;
-        const currentInstallment = sale.paymentMethod === "installment" && sale.installmentValues 
-          ? sale.installmentValues[0] 
-          : totalSaleValue;
 
-        return (
-          <Card 
-            key={sale.id} 
-            className={`p-6 shadow-[var(--shadow-card)] border-border transition-[var(--transition-smooth)] hover:shadow-[var(--shadow-elegant)] hover:scale-[1.01] ${isQuitado ? 'bg-green-50 dark:bg-green-950/10' : ''}`}
-          >
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
-              <div>
-                <h3 className="text-xl font-semibold text-foreground mb-1">{sale.customerName}</h3>
-                <p className="text-sm text-muted-foreground">{sale.products.length} produto(s)</p>
-              </div>
-              <div className="flex gap-2 items-center">
-                <Badge variant={sale.paymentMethod === "pix" ? "default" : "secondary"} className="w-fit">
-                  {sale.paymentMethod === "pix" ? "PIX" : `${sale.installments}x`}
-                </Badge>
+            const totalPurchaseValue = sale.products.reduce((sum, p) => sum + p.purchaseValue, 0);
+            const totalSaleValue = sale.products.reduce((sum, p) => sum + p.saleValue, 0);
+            const profit = totalSaleValue - totalPurchaseValue;
+            const currentInstallment = sale.paymentMethod === "installment" && sale.installmentValues 
+              ? sale.installmentValues[0] 
+              : totalSaleValue;
+
+            return (
+              <Card 
+                key={sale.id} 
+                className={`p-6 shadow-[var(--shadow-card)] border-border relative transition-[var(--transition-smooth)] hover:shadow-[var(--shadow-elegant)] hover:scale-[1.01] ${isQuitado ? 'bg-green-50 dark:bg-green-950/10 grayscale-[0.3]' : ''}`}
+              >
+                {/* Marca d'água QUITADO */}
                 {isQuitado && (
-                  <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-                    Quitado
-                  </Badge>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEditSale(sale)}
-                >
-                  Editar
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => onDeleteSale(sale.id)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="mb-4 space-y-2">
-              <h4 className="text-sm font-semibold text-foreground">Produtos:</h4>
-              {sale.products.map((product) => {
-                const productProfit = product.saleValue - product.purchaseValue;
-                return (
-                  <div key={product.id} className="p-3 rounded-lg bg-muted/50 border border-border">
-                    <div className="flex justify-between items-center gap-4">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground">{product.productName}</p>
-                        <p className="text-xs text-muted-foreground">Ref: {product.productRef}</p>
-                      </div>
-                      <div className="flex items-center gap-4 shrink-0">
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">Compra</p>
-                          <p className="font-medium text-foreground">R$ {product.purchaseValue.toFixed(2)}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">Venda</p>
-                          <p className="font-medium text-foreground">R$ {product.saleValue.toFixed(2)}</p>
-                        </div>
-                        <div className="text-right min-w-[100px]">
-                          <p className="text-xs text-muted-foreground">Lucro</p>
-                          <p className={`font-medium ${productProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            R$ {productProfit.toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                    <span className="text-green-600/20 text-[8rem] font-black rotate-[-20deg] select-none">
+                      QUITADO
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                <DollarSign className="w-5 h-5 text-primary mt-1" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Valor Total de Compra</p>
-                  <p className="text-lg font-semibold text-foreground">R$ {totalPurchaseValue.toFixed(2)}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                <TrendingUp className="w-5 h-5 text-green-600 mt-1" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Lucro Total</p>
-                  <p className={`text-lg font-semibold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    R$ {profit.toFixed(2)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/10">
-                <Calendar className="w-5 h-5 text-primary mt-1" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Parcela do Mês</p>
-                  <p className="text-lg font-bold text-foreground">R$ {currentInstallment.toFixed(2)}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground border-t border-border pt-4">
-              <div>
-                <span className="font-medium">Data da Compra:</span> {new Date(sale.purchaseDate).toLocaleDateString('pt-BR')}
-              </div>
-              <div>
-                <span className="font-medium">Data de Pagamento:</span> {new Date(sale.paymentDate).toLocaleDateString('pt-BR')}
-              </div>
-              <div>
-                <span className="font-medium">Valor Total de Venda:</span> R$ {totalSaleValue.toFixed(2)}
-              </div>
-              {sale.advancePayment && sale.advancePayment > 0 && (
-                <div>
-                  <span className="font-medium">Entrada/Adiantamento:</span> <span className="text-green-600">R$ {sale.advancePayment.toFixed(2)}</span>
-                </div>
-              )}
-            </div>
-
-            {sale.paymentMethod === "installment" && sale.installmentValues && (
-              <div className="mt-4 p-3 rounded-lg bg-accent/10 border border-accent/20">
-                <p className="text-sm font-medium text-foreground mb-2">Detalhes das Parcelas:</p>
-                <div className="flex flex-wrap gap-2">
-                  {sale.installmentValues.map((value, index) => {
-                    const installmentDate = sale.installmentDates?.[index];
-                    const formattedDate = installmentDate 
-                      ? new Date(installmentDate).toLocaleDateString('pt-BR')
-                      : '';
-                    return (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {index + 1}ª {formattedDate && `(${formattedDate})`}: R$ {value.toFixed(2)}
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
+                  <div>
+                    <h3 className="text-xl font-semibold text-foreground mb-1">{sale.customerName}</h3>
+                    <p className="text-sm text-muted-foreground">{sale.products.length} produto(s)</p>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <Badge variant={sale.paymentMethod === "pix" ? "default" : "secondary"} className="w-fit">
+                      {sale.paymentMethod === "pix" ? "PIX" : `${sale.installments}x`}
+                    </Badge>
+                    {isQuitado && (
+                      <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                        Quitado
                       </Badge>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onEditSale(sale)}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => onDeleteSale(sale.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mb-4 space-y-2">
+                  <h4 className="text-sm font-semibold text-foreground">Produtos:</h4>
+                  {sale.products.map((product) => {
+                    const productProfit = product.saleValue - product.purchaseValue;
+                    return (
+                      <div key={product.id} className="p-3 rounded-lg bg-muted/50 border border-border">
+                        <div className="flex justify-between items-center gap-4">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground">{product.productName}</p>
+                            <p className="text-xs text-muted-foreground">Ref: {product.productRef}</p>
+                          </div>
+                          <div className="flex items-center gap-4 shrink-0">
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">Compra</p>
+                              <p className="font-medium text-foreground">R$ {product.purchaseValue.toFixed(2)}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">Venda</p>
+                              <p className="font-medium text-foreground">R$ {product.saleValue.toFixed(2)}</p>
+                            </div>
+                            <div className="text-right min-w-[100px]">
+                              <p className="text-xs text-muted-foreground">Lucro</p>
+                              <p className={`font-medium ${productProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                R$ {productProfit.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
-              </div>
-            )}
-          </Card>
-        );
-      })}
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                    <DollarSign className="w-5 h-5 text-primary mt-1" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Valor Total de Compra</p>
+                      <p className="text-lg font-semibold text-foreground">R$ {totalPurchaseValue.toFixed(2)}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                    <TrendingUp className="w-5 h-5 text-green-600 mt-1" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Lucro Total</p>
+                      <p className={`text-lg font-semibold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        R$ {profit.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/10">
+                    <Calendar className="w-5 h-5 text-primary mt-1" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Parcela do Mês</p>
+                      <p className="text-lg font-bold text-foreground">R$ {currentInstallment.toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground border-t border-border pt-4">
+                  <div>
+                    <span className="font-medium">Data da Compra:</span> {new Date(sale.purchaseDate).toLocaleDateString('pt-BR')}
+                  </div>
+                  <div>
+                    <span className="font-medium">Data de Pagamento:</span> {new Date(sale.paymentDate).toLocaleDateString('pt-BR')}
+                  </div>
+                  <div>
+                    <span className="font-medium">Valor Total de Venda:</span> R$ {totalSaleValue.toFixed(2)}
+                  </div>
+                  {sale.advancePayment && sale.advancePayment > 0 && (
+                    <div>
+                      <span className="font-medium">Entrada/Adiantamento:</span> <span className="text-green-600">R$ {sale.advancePayment.toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+
+                {sale.paymentMethod === "installment" && sale.installmentValues && (
+                  <div className="mt-4 p-3 rounded-lg bg-accent/10 border border-accent/20">
+                    <p className="text-sm font-medium text-foreground mb-2">Detalhes das Parcelas:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {sale.installmentValues.map((value, index) => {
+                        const installmentDate = sale.installmentDates?.[index];
+                        const formattedDate = installmentDate 
+                          ? new Date(installmentDate).toLocaleDateString('pt-BR')
+                          : '';
+                        return (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {index + 1}ª {formattedDate && `(${formattedDate})`}: R$ {value.toFixed(2)}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+      </div>
     </div>
   );
 };
+
+export default SalesList;
