@@ -141,9 +141,8 @@ const APagar = () => {
           </Select>
         </div>
 
-        {/* Cards de Resumo */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {/* Total do Mês */}
+        {/* Card de Resumo */}
+        <div className="max-w-md mx-auto mb-8">
           <Card className="bg-gradient-to-br from-card to-red-50 dark:to-red-950/20 p-6 rounded-xl shadow-md border">
             <CardTitle className="text-sm text-muted-foreground mb-1">
               Total do Mês
@@ -152,48 +151,10 @@ const APagar = () => {
               R$ {totalMes.toFixed(2)}
             </CardContent>
           </Card>
-
-          {/* Categoria Principal */}
-          <Card className="bg-gradient-to-br from-card to-blue-50 dark:to-blue-950/20 p-6 rounded-xl shadow-md border">
-            <CardTitle className="text-sm text-muted-foreground mb-1">
-              Categoria Principal
-            </CardTitle>
-            <CardContent className="text-lg font-semibold text-foreground p-0">
-              {categoriaNome}<br/>
-              <span className="text-2xl">R$ {categoriaValor.toFixed(2)}</span>
-            </CardContent>
-          </Card>
-
-          {/* Última Despesa */}
-          <Card className="bg-gradient-to-br from-card to-green-50 dark:to-green-950/20 p-6 rounded-xl shadow-md border">
-            <CardTitle className="text-sm text-muted-foreground mb-1">
-              Última Despesa
-            </CardTitle>
-            <CardContent className="text-lg font-semibold text-foreground p-0">
-              {ultimaDespesa ? (
-                <>
-                  {new Date(ultimaDespesa.data).toLocaleDateString('pt-BR')}<br/>
-                  <span className="text-2xl">R$ {ultimaDespesa.valorTotal.toFixed(2)}</span>
-                </>
-              ) : (
-                <span className="text-muted-foreground">Nenhuma</span>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Total Geral */}
-          <Card className="bg-gradient-to-br from-card to-orange-50 dark:to-orange-950/20 p-6 rounded-xl shadow-md border">
-            <CardTitle className="text-sm text-muted-foreground mb-1">
-              Total Geral
-            </CardTitle>
-            <CardContent className="text-3xl font-bold text-red-600 dark:text-red-400 p-0">
-              R$ {totalGeral.toFixed(2)}
-            </CardContent>
-          </Card>
         </div>
 
         {/* Formulário */}
-        <div className="mb-8">
+        <div className="mb-8 max-w-[70%] mx-auto">
           <ExpenseForm 
             onExpenseAdded={handleExpenseAdded}
             editingExpense={editingExpense}

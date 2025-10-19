@@ -56,9 +56,20 @@ const ExpenseCard = ({
   const currentInstallment = installments ? installments.find(inst => inst.mesReferencia === currentMesRef) : null;
   const currentValue = currentInstallment ? currentInstallment.valorTotal : (hasInstallments ? installments && installments[0].valorTotal : expense.valorTotal);
 
+  const isQuitado = expense.formaPagamento === "Parcelado" && expense.parcelaAtual === expense.parcelas;
+
   return (
-    <Card className="w-full shadow-md hover:shadow-lg transition-shadow border">
+    <Card 
+      className={`w-full shadow-md hover:shadow-lg transition-shadow border ${
+        isQuitado ? "opacity-75 grayscale" : ""
+      }`}
+    >
       <CardHeader className="pb-3">
+        {isQuitado && (
+          <div className="absolute -rotate-12 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-red-500 text-2xl font-bold border-2 border-red-500 rounded px-2 py-1">
+            QUITADO
+          </div>
+        )}
         <div className="flex items-start justify-between w-full">
           <div className="flex-1">
             <div className="flex items-center justify-between gap-4">
