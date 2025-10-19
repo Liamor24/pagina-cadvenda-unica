@@ -62,9 +62,20 @@ const Index = () => {
     if (selectedMonth === "total") return sales;
     
     return sales.filter(sale => {
-      const paymentDate = new Date(sale.paymentDate);
-      const saleMonth = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}`;
-      return saleMonth === selectedMonth;
+      if (sale.paymentMethod === "pix") {
+        // Para vendas PIX, usa a data de pagamento
+        const paymentDate = new Date(sale.paymentDate);
+        const saleMonth = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}`;
+        return saleMonth === selectedMonth;
+      } else if (sale.paymentMethod === "installment" && sale.installmentDates) {
+        // Para vendas parceladas, mostra se tiver alguma parcela no mês selecionado
+        return sale.installmentDates.some(date => {
+          const installmentDate = new Date(date);
+          const installmentMonth = `${installmentDate.getFullYear()}-${String(installmentDate.getMonth() + 1).padStart(2, '0')}`;
+          return installmentMonth === selectedMonth;
+        });
+      }
+      return false;
     });
   };
 
@@ -152,7 +163,9 @@ const Index = () => {
               <p className="text-3xl font-bold text-foreground">{filteredSales.length}</p>
             </div>
             <div className="bg-gradient-to-br from-card to-accent/5 p-6 rounded-xl shadow-[var(--shadow-card)] border border-border">
-              <p className="text-sm text-muted-foreground mb-1">Total a receber (mes)</p>
+              <p className="text-sm text-muted-foreground mb-1">
+                Total a receber ({selectedMonth === "total" ? "Todos os meses" : getMonthLabel(selectedMonth)})
+              </p>
               <p className="text-3xl font-bold text-foreground">R$ {totalSales.toFixed(2)}</p>
             </div>
             <div className="bg-gradient-to-br from-card to-green-50 p-6 rounded-xl shadow-[var(--shadow-card)] border border-border">

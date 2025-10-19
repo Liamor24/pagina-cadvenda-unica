@@ -145,7 +145,7 @@ const APagar = () => {
         <div className="max-w-md mx-auto mb-8">
           <Card className="bg-gradient-to-br from-card to-red-50 dark:to-red-950/20 p-6 rounded-xl shadow-md border">
             <CardTitle className="text-sm text-muted-foreground mb-1">
-              Total a Pagar (mes)
+              Total a Pagar ({selectedMonth === "TODOS" ? "Todos os meses" : selectedMonth})
             </CardTitle>
             <CardContent className="text-3xl font-bold text-foreground p-0">
               R$ {totalMes.toFixed(2)}
