@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SalesForm, type Sale } from "@/components/SalesForm";
 import { SalesList } from "@/components/SalesList";
 import { toast } from "@/hooks/use-toast";
@@ -9,17 +9,33 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
 const Index = () => {
-  const [sales, setSales] = useState<Sale[]>([]);
+  const [sales, setSales] = useState<Sale[]>(() => {
+    try {
+      const raw = localStorage.getItem('sales');
+      return raw ? JSON.parse(raw) as Sale[] : [];
+    } catch (e) {
+      console.error('Erro ao ler vendas do localStorage', e);
+      return [];
+    }
+  });
   const [selectedMonth, setSelectedMonth] = useState<string>("total");
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('sales', JSON.stringify(sales));
+    } catch (e) {
+      console.error('Erro ao salvar vendas no localStorage', e);
+    }
+  }, [sales]);
+
   const handleSaleAdded = (sale: Sale) => {
-    setSales([sale, ...sales]);
+    setSales(prev => [sale, ...prev]);
     setEditingSale(null);
   };
 
   const handleSaleUpdated = (updatedSale: Sale) => {
-    setSales(sales.map(s => s.id === updatedSale.id ? updatedSale : s));
+    setSales(prev => prev.map(s => s.id === updatedSale.id ? updatedSale : s));
     setEditingSale(null);
     toast({
       title: "Venda atualizada!",
@@ -34,7 +50,7 @@ const Index = () => {
   };
 
   const handleDeleteSale = (saleId: string) => {
-    setSales(sales.filter(s => s.id !== saleId));
+    setSales(prev => prev.filter(s => s.id !== saleId));
     toast({
       title: "Venda removida!",
       description: "A venda foi excluída com sucesso.",
