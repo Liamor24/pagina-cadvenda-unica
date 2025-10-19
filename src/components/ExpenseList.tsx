@@ -53,25 +53,27 @@ const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: ExpenseListPr
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  // Agrupar despesas por data de compra e ID base (para parcelas)
+  // Agrupar despesas por compra. Para entradas parceladas (cada parcela é uma entrada
+  // separada) agrupamos por descrição + número de parcelas + categoria + observação
+  // para reconstruir a compra original em um único card.
   const groupedExpenses = expenses.reduce((acc, expense) => {
-    // Criar chave única baseada na descrição e data (para agrupar parcelas)
-    const baseKey = expense.formaPagamento === "Parcelado" 
-      ? `${expense.descricao}-${expense.mesReferencia}`
-      : expense.id;
-    
-    if (!acc[baseKey]) {
-      acc[baseKey] = [];
+    let baseKey: string;
+    if (expense.formaPagamento === "Parcelado") {
+      baseKey = `${expense.descricao}::${expense.parcelas ?? 0}::${expense.categoria}::${expense.observacao ?? ''}`;
+    } else {
+      baseKey = expense.id;
     }
+
+    if (!acc[baseKey]) acc[baseKey] = [];
     acc[baseKey].push(expense);
     return acc;
   }, {} as Record<string, Expense[]>);
 
-  // Ordenar grupos por data mais recente
+  // Ordenar grupos por data mais recente (verifica a data máxima dentro do grupo)
   const sortedGroups = Object.values(groupedExpenses).sort((a, b) => {
-    const dateA = new Date(a[0].mesReferencia);
-    const dateB = new Date(b[0].mesReferencia);
-    return dateB.getTime() - dateA.getTime();
+    const maxA = Math.max(...a.map(x => new Date(x.data).getTime()));
+    const maxB = Math.max(...b.map(x => new Date(x.data).getTime()));
+    return maxB - maxA;
   });
 
   if (expenses.length === 0) {

@@ -43,18 +43,36 @@ const ExpenseCard = ({
   const [isOpen, setIsOpen] = useState(false);
   const hasInstallments = installments && installments.length > 1;
 
+  // calcular valor total do grupo (se installments representarem parcelas,
+  // somamos os valores; caso seja entrada única, usamos valorTotal)
+  const totalValue = installments && installments.length > 0
+    ? installments.reduce((s, it) => s + it.valorTotal, 0)
+    : expense.valorTotal;
+
+  // valor da parcela no mês vigente: procurar parcela cuja mesReferencia
+  // corresponde ao mês atual
+  const now = new Date();
+  const currentMesRef = `${now.toLocaleString('pt-BR', { month: 'long' }).replace(/^./, c => c.toUpperCase())} ${now.getFullYear()}`;
+  const currentInstallment = installments ? installments.find(inst => inst.mesReferencia === currentMesRef) : null;
+  const currentValue = currentInstallment ? currentInstallment.valorTotal : (hasInstallments ? installments && installments[0].valorTotal : expense.valorTotal);
+
   return (
     <Card className="w-full shadow-md hover:shadow-lg transition-shadow border">
       <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <CardTitle className="text-lg font-semibold">{expense.descricao}</CardTitle>
-              {getCategoryBadge(expense.categoria)}
+        <div className="flex items-start justify-between w-full">
+          <div className="flex-1">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-lg font-semibold">{expense.descricao}</CardTitle>
+                <CardDescription className="text-sm">{formatDate(expense.data)}</CardDescription>
+              </div>
+
+              <div className="text-right">
+                <div className="text-lg font-bold">{formatCurrency(totalValue)}</div>
+                <div className="text-sm text-muted-foreground">{formatCurrency(currentValue)} (mês vigente)</div>
+              </div>
             </div>
-            <CardDescription className="text-sm">
-              Referência: {expense.mesReferencia}
-            </CardDescription>
+            <div className="mt-2">{getCategoryBadge(expense.categoria)}</div>
           </div>
           <div className="flex gap-2">
             <Button
@@ -118,71 +136,61 @@ const ExpenseCard = ({
         {hasInstallments && (
           <Collapsible open={isOpen} onOpenChange={setIsOpen}>
             <CollapsibleTrigger asChild>
-              <Button variant="outline" className="w-full mt-2">
-                <span className="flex-1 text-left">
-                  Ver Parcelas ({installments.length})
-                </span>
-                <ChevronDown
-                  className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
-                />
-              </Button>
+              <div className="w-full">
+                <Button variant="outline" className="w-full mt-2" onClick={() => setIsOpen(v => !v)}>
+                  <span className="flex-1 text-left">VER MAIS</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                </Button>
+              </div>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-3 space-y-2">
-              <div className="border rounded-lg overflow-hidden">
-                {installments
-                  .sort((a, b) => (a.parcelaAtual || 0) - (b.parcelaAtual || 0))
-                  .map((installment, idx) => (
-                    <div
-                      key={installment.id}
-                      className={`p-3 flex items-center justify-between ${
-                        idx !== installments.length - 1 ? "border-b" : ""
-                      } bg-muted/30`}
-                    >
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">
-                          Parcela {installment.parcelaAtual}/{installment.parcelas}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {installment.mesReferencia}
-                        </p>
+                <div className="border rounded-lg overflow-hidden">
+                  {installments
+                    .sort((a, b) => (a.parcelaAtual || 0) - (b.parcelaAtual || 0))
+                    .map((installment, idx) => (
+                      <div
+                        key={installment.id}
+                        className={`p-3 flex items-center justify-between ${
+                          idx !== installments.length - 1 ? "border-b" : ""
+                        } bg-muted/30`}
+                      >
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">Parcela {installment.parcelaAtual}/{installment.parcelas}</p>
+                          <p className="text-xs text-muted-foreground">{installment.mesReferencia}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold">{formatCurrency(installment.valorTotal)}</p>
+                          <p className="text-xs text-muted-foreground">{new Date(installment.data || installment.data).toLocaleDateString('pt-BR')}</p>
+                        </div>
+                        <div className="flex gap-1 ml-3">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(installment)}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Trash2 className="h-3 w-3 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir a parcela {installment.parcelaAtual}/{installment.parcelas}?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => onDelete(installment.id)}>
+                                  Confirmar
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold">{formatCurrency(installment.valorTotal)}</p>
-                      </div>
-                      <div className="flex gap-1 ml-3">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => onEdit(installment)}
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Trash2 className="h-3 w-3 text-destructive" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja excluir a parcela {installment.parcelaAtual}/{installment.parcelas}?
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => onDelete(installment.id)}>
-                                Confirmar
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
-                  ))}
-              </div>
+                    ))}
+                </div>
             </CollapsibleContent>
           </Collapsible>
         )}
