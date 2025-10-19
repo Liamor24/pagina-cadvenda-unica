@@ -152,7 +152,7 @@ const Index = () => {
               <p className="text-3xl font-bold text-foreground">{filteredSales.length}</p>
             </div>
             <div className="bg-gradient-to-br from-card to-accent/5 p-6 rounded-xl shadow-[var(--shadow-card)] border border-border">
-              <p className="text-sm text-muted-foreground mb-1">Valor Total</p>
+              <p className="text-sm text-muted-foreground mb-1">Total a receber (mes)</p>
               <p className="text-3xl font-bold text-foreground">R$ {totalSales.toFixed(2)}</p>
             </div>
             <div className="bg-gradient-to-br from-card to-green-50 p-6 rounded-xl shadow-[var(--shadow-card)] border border-border">
