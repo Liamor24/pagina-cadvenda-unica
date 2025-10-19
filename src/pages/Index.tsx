@@ -5,6 +5,8 @@ import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/ellas-logo.jpeg";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   const [sales, setSales] = useState<Sale[]>([]);
@@ -95,6 +97,11 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground hidden md:block">Gestão elegante e eficiente</p>
               </div>
             </div>
+            <nav className="flex gap-2">
+              <Button variant="outline" asChild>
+                <Link to="/a-pagar">A Pagar</Link>
+              </Button>
+            </nav>
           </div>
         </div>
       </header>
