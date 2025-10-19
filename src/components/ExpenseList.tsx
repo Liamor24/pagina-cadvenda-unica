@@ -69,8 +69,25 @@ const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: ExpenseListPr
     return acc;
   }, {} as Record<string, Expense[]>);
 
-  // Ordenar grupos por data mais recente (verifica a data máxima dentro do grupo)
+  // Ordenar grupos por:
+  // 1. Quitado (não quitados primeiro)
+  // 2. Data mais recente
+  // 3. Parcelas restantes (mais parcelas primeiro)
   const sortedGroups = Object.values(groupedExpenses).sort((a, b) => {
+    const aQuitado = a[0].formaPagamento === "Parcelado" && a[0].parcelaAtual === a[0].parcelas;
+    const bQuitado = b[0].formaPagamento === "Parcelado" && b[0].parcelaAtual === b[0].parcelas;
+    
+    // Quitados vão para o final
+    if (aQuitado !== bQuitado) return aQuitado ? 1 : -1;
+
+    // Se ambos são parcelados, compara parcelas restantes
+    if (a[0].formaPagamento === "Parcelado" && b[0].formaPagamento === "Parcelado") {
+      const aRestantes = a[0].parcelas! - (a[0].parcelaAtual ?? 0);
+      const bRestantes = b[0].parcelas! - (b[0].parcelaAtual ?? 0);
+      if (aRestantes !== bRestantes) return bRestantes - aRestantes;
+    }
+
+    // Por fim, ordena por data mais recente
     const maxA = Math.max(...a.map(x => new Date(x.data).getTime()));
     const maxB = Math.max(...b.map(x => new Date(x.data).getTime()));
     return maxB - maxA;

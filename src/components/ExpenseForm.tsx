@@ -144,10 +144,10 @@ const ExpenseForm = ({ onExpenseAdded, editingExpense, onExpenseUpdated }: Expen
         // Parcelado
         const numParcelas = parseInt(parcelas);
         
-        if (numParcelas < 2 || numParcelas > 12) {
+        if (numParcelas < 1 || numParcelas > 12) {
           toast({
             title: "Erro",
-            description: "O número de parcelas deve estar entre 2 e 12.",
+            description: "O número de parcelas deve estar entre 1 e 12.",
             variant: "destructive"
           });
           return;
@@ -272,7 +272,7 @@ const ExpenseForm = ({ onExpenseAdded, editingExpense, onExpenseUpdated }: Expen
                   onChange={(e) => setParcelas(e.target.value)}
                   required
                 />
-                <p className="text-xs text-muted-foreground mt-1">Entre 2 e 12 parcelas</p>
+                <p className="text-xs text-muted-foreground mt-1">Entre 1 e 12 parcelas</p>
               </div>
             )}
 
