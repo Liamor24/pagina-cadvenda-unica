@@ -2,7 +2,24 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Sale } from "./SalesForm";
-import { Calendar, TrendingUp, DollarSign, Trash2 } from "lucide-react";
+import { Calendar, TrendingUp, DollarSign, Trash2, Pencil } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
 
 interface SalesListProps {
   sales: Sale[];
@@ -13,9 +30,11 @@ interface SalesListProps {
 export const SalesList = ({ sales, onDeleteSale, onEditSale }: SalesListProps) => {
   if (sales.length === 0) {
     return (
-      <Card className="p-12 text-center shadow-[var(--shadow-card)]">
-        <p className="text-muted-foreground text-lg">Nenhuma venda cadastrada ainda.</p>
-        <p className="text-sm text-muted-foreground mt-2">Adicione sua primeira venda usando o formulário acima.</p>
+      <Card className="w-full shadow-lg rounded-xl border">
+        <div className="p-8 text-center">
+          <p className="text-muted-foreground text-lg">Nenhuma venda cadastrada ainda.</p>
+          <p className="text-sm text-muted-foreground mt-2">Adicione sua primeira venda usando o formulário acima.</p>
+        </div>
       </Card>
     );
   }
@@ -64,144 +83,198 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale }: SalesListProps) =
             return (
               <Card 
                 key={sale.id} 
-                className={`p-6 shadow-[var(--shadow-card)] border-border relative transition-[var(--transition-smooth)] hover:shadow-[var(--shadow-elegant)] hover:scale-[1.01] ${isQuitado ? 'bg-green-50 dark:bg-green-950/10 grayscale-[0.3]' : ''}`}
+                className={`w-full shadow-md hover:shadow-lg transition-shadow border ${
+                  isQuitado ? "opacity-75 grayscale" : ""
+                }`}
               >
-                {/* Marca d'água QUITADO */}
-                {isQuitado && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
-                    <span className="text-green-600/20 text-[8rem] font-black rotate-[-20deg] select-none">
+                <div className="p-4 relative">
+                  {isQuitado && (
+                    <div className="absolute -rotate-12 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-red-500 text-2xl font-bold border-2 border-red-500 rounded px-2 py-1 z-10">
                       QUITADO
-                    </span>
-                  </div>
-                )}
+                    </div>
+                  )}
 
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground mb-1">{sale.customerName}</h3>
-                    <p className="text-sm text-muted-foreground">{sale.products.length} produto(s)</p>
-                  </div>
-                  <div className="flex gap-2 items-center">
-                    <Badge variant={sale.paymentMethod === "pix" ? "default" : "secondary"} className="w-fit">
-                      {sale.paymentMethod === "pix" ? "PIX" : `${sale.installments}x`}
-                    </Badge>
-                    {isQuitado && (
-                      <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-                        Quitado
-                      </Badge>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onEditSale(sale)}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => onDeleteSale(sale.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+                  <div className="flex items-start justify-between w-full mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <h3 className="text-lg font-semibold text-foreground">{sale.customerName}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(sale.paymentDate).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
 
-                <div className="mb-4 space-y-2">
-                  <h4 className="text-sm font-semibold text-foreground">Produtos:</h4>
-                  {sale.products.map((product) => {
-                    const productProfit = product.saleValue - product.purchaseValue;
-                    return (
-                      <div key={product.id} className="p-3 rounded-lg bg-muted/50 border border-border">
-                        <div className="flex justify-between items-center gap-4">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-foreground">{product.productName}</p>
-                            <p className="text-xs text-muted-foreground">Ref: {product.productRef}</p>
-                          </div>
-                          <div className="flex items-center gap-4 shrink-0">
-                            <div className="text-right">
-                              <p className="text-xs text-muted-foreground">Compra</p>
-                              <p className="font-medium text-foreground">R$ {product.purchaseValue.toFixed(2)}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs text-muted-foreground">Venda</p>
-                              <p className="font-medium text-foreground">R$ {product.saleValue.toFixed(2)}</p>
-                            </div>
-                            <div className="text-right min-w-[100px]">
-                              <p className="text-xs text-muted-foreground">Lucro</p>
-                              <p className={`font-medium ${productProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                R$ {productProfit.toFixed(2)}
-                              </p>
-                            </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold">R$ {totalSaleValue.toFixed(2)}</div>
+                          <div className="text-sm text-muted-foreground">
+                            R$ {currentInstallment.toFixed(2)} (mês vigente)
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                    <DollarSign className="w-5 h-5 text-primary mt-1" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Valor Total de Compra</p>
-                      <p className="text-lg font-semibold text-foreground">R$ {totalPurchaseValue.toFixed(2)}</p>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => onEditSale(sale)}
+                        title="Editar venda"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="icon" title="Excluir venda">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja excluir esta venda?
+                              {sale.paymentMethod === "installment" && (
+                                <span className="block mt-2 font-semibold text-foreground">
+                                  Atenção: Todas as parcelas desta venda serão excluídas.
+                                </span>
+                              )}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => onDeleteSale(sale.id)}>
+                              Confirmar
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                    <TrendingUp className="w-5 h-5 text-green-600 mt-1" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Lucro Total</p>
-                      <p className={`text-lg font-semibold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        R$ {profit.toFixed(2)}
-                      </p>
+                  <div className="flex items-center justify-between mb-4">
+                    <Badge variant={sale.paymentMethod === "pix" ? "default" : "outline"}>
+                      {sale.paymentMethod === "pix" ? "PIX" : `${sale.installments}x`}
+                    </Badge>
+                    {sale.paymentMethod === "installment" && (
+                      <span className="text-sm text-muted-foreground">
+                        {sale.installmentDates?.findIndex(d => new Date(d) > new Date()) ?? 0}/{sale.installments} parcelas
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                      <DollarSign className="w-5 h-5 text-primary mt-1" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Valor Total de Compra</p>
+                        <p className="text-lg font-semibold text-foreground">R$ {totalPurchaseValue.toFixed(2)}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                      <TrendingUp className="w-5 h-5 text-green-600 mt-1" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Lucro Total</p>
+                        <p className={`text-lg font-semibold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          R$ {profit.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/10">
+                      <Calendar className="w-5 h-5 text-primary mt-1" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Parcela do Mês</p>
+                        <p className="text-lg font-bold text-foreground">R$ {currentInstallment.toFixed(2)}</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/10">
-                    <Calendar className="w-5 h-5 text-primary mt-1" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Parcela do Mês</p>
-                      <p className="text-lg font-bold text-foreground">R$ {currentInstallment.toFixed(2)}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground border-t border-border pt-4">
-                  <div>
-                    <span className="font-medium">Data da Compra:</span> {new Date(sale.purchaseDate).toLocaleDateString('pt-BR')}
-                  </div>
-                  <div>
-                    <span className="font-medium">Data de Pagamento:</span> {new Date(sale.paymentDate).toLocaleDateString('pt-BR')}
-                  </div>
-                  <div>
-                    <span className="font-medium">Valor Total de Venda:</span> R$ {totalSaleValue.toFixed(2)}
-                  </div>
-                  {sale.advancePayment && sale.advancePayment > 0 && (
-                    <div>
-                      <span className="font-medium">Entrada/Adiantamento:</span> <span className="text-green-600">R$ {sale.advancePayment.toFixed(2)}</span>
-                    </div>
+                  {sale.paymentMethod === "installment" && sale.installmentValues && (
+                    <Collapsible>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="outline" className="w-full">
+                          Ver Parcelas
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-4">
+                        <div className="border rounded-lg overflow-hidden">
+                          {sale.installmentValues.map((value, index) => {
+                            const installmentDate = sale.installmentDates?.[index];
+                            const isPaid = installmentDate && new Date(installmentDate) < new Date();
+                            
+                            return (
+                              <div
+                                key={index}
+                                className={`p-3 flex items-center justify-between ${
+                                  index !== sale.installmentValues!.length - 1 ? "border-b" : ""
+                                } bg-muted/30`}
+                              >
+                                <div className="flex-1">
+                                  <p className="font-medium text-sm">Parcela {index + 1}/{sale.installments}</p>
+                                  {installmentDate && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {new Date(installmentDate).toLocaleDateString('pt-BR')}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="text-right flex items-center gap-2">
+                                  <p className="font-semibold">R$ {value.toFixed(2)}</p>
+                                  {isPaid && (
+                                    <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-600">
+                                      Pago
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
                   )}
-                </div>
 
-                {sale.paymentMethod === "installment" && sale.installmentValues && (
-                  <div className="mt-4 p-3 rounded-lg bg-accent/10 border border-accent/20">
-                    <p className="text-sm font-medium text-foreground mb-2">Detalhes das Parcelas:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {sale.installmentValues.map((value, index) => {
-                        const installmentDate = sale.installmentDates?.[index];
-                        const formattedDate = installmentDate 
-                          ? new Date(installmentDate).toLocaleDateString('pt-BR')
-                          : '';
-                        return (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {index + 1}ª {formattedDate && `(${formattedDate})`}: R$ {value.toFixed(2)}
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                  <Collapsible className="mt-4">
+                    <CollapsibleTrigger asChild>
+                      <Button variant="outline" className="w-full">
+                        Ver Produtos
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-4">
+                      <div className="space-y-2">
+                        {sale.products.map((product) => {
+                          const productProfit = product.saleValue - product.purchaseValue;
+                          return (
+                            <div key={product.id} className="p-3 rounded-lg bg-muted/50 border border-border">
+                              <div className="flex justify-between items-center gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-foreground">{product.productName}</p>
+                                  <p className="text-xs text-muted-foreground">Ref: {product.productRef}</p>
+                                </div>
+                                <div className="flex items-center gap-4 shrink-0">
+                                  <div className="text-right">
+                                    <p className="text-xs text-muted-foreground">Compra</p>
+                                    <p className="font-medium text-foreground">R$ {product.purchaseValue.toFixed(2)}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-xs text-muted-foreground">Venda</p>
+                                    <p className="font-medium text-foreground">R$ {product.saleValue.toFixed(2)}</p>
+                                  </div>
+                                  <div className="text-right min-w-[100px]">
+                                    <p className="text-xs text-muted-foreground">Lucro</p>
+                                    <p className={`font-medium ${productProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      R$ {productProfit.toFixed(2)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
               </Card>
             );
           })}
