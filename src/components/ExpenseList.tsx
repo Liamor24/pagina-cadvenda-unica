@@ -87,7 +87,7 @@ const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: ExpenseListPr
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {sortedGroups.map((group) => {
         const mainExpense = group[0];
         const hasInstallments = group.length > 1;

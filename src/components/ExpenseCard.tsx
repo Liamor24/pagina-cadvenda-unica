@@ -113,17 +113,15 @@ const ExpenseCard = ({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <p className="text-sm text-muted-foreground">Valor Total</p>
-            <p className="text-xl font-bold text-primary">{formatCurrency(expense.valorTotal)}</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Forma de Pagamento</p>
-            <Badge variant={expense.formaPagamento === "PIX" ? "default" : "outline"} className="mt-1">
-              {expense.formaPagamento}
-            </Badge>
-          </div>
+        <div className="flex items-center justify-between">
+          <Badge variant={expense.formaPagamento === "PIX" ? "default" : "outline"}>
+            {expense.formaPagamento}
+          </Badge>
+          {expense.formaPagamento === "Parcelado" && (
+            <span className="text-sm text-muted-foreground">
+              {expense.parcelaAtual}/{expense.parcelas} parcelas
+            </span>
+          )}
         </div>
 
         {expense.observacao && (
