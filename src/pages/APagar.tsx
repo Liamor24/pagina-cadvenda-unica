@@ -218,24 +218,26 @@ const APagar = () => {
         </div>
 
         {/* Cards de Resumo */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto mb-8">
-          <Card className="bg-gradient-to-br from-card to-accent/5 p-6 rounded-xl shadow-[var(--shadow-card)] border border-border">
-            <CardTitle className="text-sm text-muted-foreground mb-1">
-              Total a receber ({selectedMonth === "TODOS" ? "Todos os meses" : selectedMonth})
-            </CardTitle>
-            <CardContent className="text-3xl font-bold text-foreground p-0">
+        <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto mb-8">
+          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 p-4 rounded-xl shadow-lg border border-blue-100 dark:border-blue-800/30 text-center group hover:scale-105 transition-transform">
+            <p className="text-xs font-medium text-blue-600 dark:text-blue-300 mb-1 group-hover:text-blue-700 transition-colors">
+              Total a receber<br/>
+              <span className="text-[10px] opacity-75">({selectedMonth === "TODOS" ? "Todos os meses" : selectedMonth})</span>
+            </p>
+            <p className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
               R$ {totalVendas.toFixed(2)}
-            </CardContent>
-          </Card>
+            </p>
+          </div>
 
-          <Card className="bg-gradient-to-br from-card to-red-50 dark:to-red-950/20 p-6 rounded-xl shadow-md border">
-            <CardTitle className="text-sm text-muted-foreground mb-1">
-              Total a Pagar ({selectedMonth === "TODOS" ? "Todos os meses" : selectedMonth})
-            </CardTitle>
-            <CardContent className="text-3xl font-bold text-foreground p-0">
+          <div className="bg-gradient-to-br from-rose-50 to-red-50 dark:from-rose-950/30 dark:to-red-950/30 p-4 rounded-xl shadow-lg border border-rose-100 dark:border-rose-800/30 text-center group hover:scale-105 transition-transform">
+            <p className="text-xs font-medium text-rose-600 dark:text-rose-300 mb-1 group-hover:text-rose-700 transition-colors">
+              Total a Pagar<br/>
+              <span className="text-[10px] opacity-75">({selectedMonth === "TODOS" ? "Todos os meses" : selectedMonth})</span>
+            </p>
+            <p className="text-2xl font-bold bg-gradient-to-r from-rose-600 to-red-600 bg-clip-text text-transparent">
               R$ {totalMes.toFixed(2)}
-            </CardContent>
-          </Card>
+            </p>
+          </div>
         </div>
 
         {/* Formulário */}

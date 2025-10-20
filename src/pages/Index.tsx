@@ -216,29 +216,40 @@ const Index = () => {
 
         {/* Statistics Cards */}
         {sales.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="bg-gradient-to-br from-card to-primary/5 p-6 rounded-xl shadow-[var(--shadow-card)] border border-border">
-              <p className="text-sm text-muted-foreground mb-1">Total de Vendas</p>
-              <p className="text-3xl font-bold text-foreground">{filteredSales.length}</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8 max-w-4xl mx-auto">
+            <div className="bg-gradient-to-br from-violet-50 to-fuchsia-50 dark:from-violet-950/30 dark:to-fuchsia-950/30 p-4 rounded-xl shadow-lg border border-violet-100 dark:border-violet-800/30 text-center group hover:scale-105 transition-transform">
+              <p className="text-xs font-medium text-violet-600 dark:text-violet-300 mb-1 group-hover:text-violet-700 transition-colors">Total de Vendas</p>
+              <p className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">{filteredSales.length}</p>
             </div>
-            <div className="bg-gradient-to-br from-card to-accent/5 p-6 rounded-xl shadow-[var(--shadow-card)] border border-border">
-              <p className="text-sm text-muted-foreground mb-1">
-                Total a receber ({selectedMonth === "total" ? "Todos os meses" : getMonthLabel(selectedMonth)})
+            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 p-4 rounded-xl shadow-lg border border-blue-100 dark:border-blue-800/30 text-center group hover:scale-105 transition-transform">
+              <p className="text-xs font-medium text-blue-600 dark:text-blue-300 mb-1 group-hover:text-blue-700 transition-colors">
+                Total a receber<br/>
+                <span className="text-[10px] opacity-75">({selectedMonth === "total" ? "Todos os meses" : getMonthLabel(selectedMonth)})</span>
               </p>
-              <p className="text-3xl font-bold text-foreground">R$ {totalSales.toFixed(2)}</p>
-            </div>
-            <div className="bg-gradient-to-br from-card to-red-50 dark:to-red-950/20 p-6 rounded-xl shadow-[var(--shadow-card)] border border-border">
-              <p className="text-sm text-muted-foreground mb-1">
-                Total a Pagar ({selectedMonth === "total" ? "Todos os meses" : getMonthLabel(selectedMonth)})
+              <p className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                R$ {totalSales.toFixed(2)}
               </p>
-              <p className="text-3xl font-bold text-foreground">R$ {totalExpenses.toFixed(2)}</p>
             </div>
-            <div className="bg-gradient-to-br from-card to-green-50 p-6 rounded-xl shadow-[var(--shadow-card)] border border-border">
-              <p className="text-sm text-muted-foreground mb-1">Lucro Total</p>
-              <p className={`text-3xl font-bold ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className="bg-gradient-to-br from-rose-50 to-red-50 dark:from-rose-950/30 dark:to-red-950/30 p-4 rounded-xl shadow-lg border border-rose-100 dark:border-rose-800/30 text-center group hover:scale-105 transition-transform">
+              <p className="text-xs font-medium text-rose-600 dark:text-rose-300 mb-1 group-hover:text-rose-700 transition-colors">
+                Total a Pagar<br/>
+                <span className="text-[10px] opacity-75">({selectedMonth === "total" ? "Todos os meses" : getMonthLabel(selectedMonth)})</span>
+              </p>
+              <p className="text-2xl font-bold bg-gradient-to-r from-rose-600 to-red-600 bg-clip-text text-transparent">
+                R$ {totalExpenses.toFixed(2)}
+              </p>
+            </div>
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 p-4 rounded-xl shadow-lg border border-emerald-100 dark:border-emerald-800/30 text-center group hover:scale-105 transition-transform">
+              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-300 mb-1 group-hover:text-emerald-700 transition-colors">Lucro Total</p>
+              <p className={`text-2xl font-bold ${
+                totalProfit >= 0 
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600' 
+                : 'bg-gradient-to-r from-rose-600 to-red-600'
+              } bg-clip-text text-transparent`}>
                 R$ {totalProfit.toFixed(2)}
               </p>
             </div>
+          </div>
           </div>
         )}
 
