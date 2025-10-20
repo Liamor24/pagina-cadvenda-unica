@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import ExpenseForm from "@/components/ExpenseForm";
 import ExpenseList from "@/components/ExpenseList";
 import logo from "@/assets/ellas-logo.jpeg";
-
 export interface Expense {
   id: string;
   descricao: string;
@@ -22,7 +21,6 @@ export interface Expense {
   mesReferencia: string;
   observacao?: string;
 }
-
 const APagar = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("TODOS");
@@ -54,37 +52,30 @@ const APagar = () => {
   useEffect(() => {
     localStorage.setItem('expenses', JSON.stringify(expenses));
   }, [expenses]);
-
   const handleExpenseAdded = (newExpenses: Expense[]) => {
     setExpenses([...expenses, ...newExpenses]);
   };
-
   const handleExpenseUpdated = (updatedExpense: Expense) => {
     setExpenses(expenses.map(exp => exp.id === updatedExpense.id ? updatedExpense : exp));
     setEditingExpense(null);
   };
-
   const handleEditExpense = (expense: Expense) => {
     setEditingExpense(expense);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   };
-
   const handleDeleteExpense = (expenseId: string) => {
     setExpenses(expenses.filter(exp => exp.id !== expenseId));
   };
 
   // Filtrar despesas por mês
-  const filteredExpenses = selectedMonth === "TODOS" 
-    ? expenses 
-    : expenses.filter(e => e.mesReferencia === selectedMonth);
+  const filteredExpenses = selectedMonth === "TODOS" ? expenses : expenses.filter(e => e.mesReferencia === selectedMonth);
 
   // Calcular meses disponíveis
-  const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
-                      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-  
-  const availableMonths = Array.from(new Set(
-    expenses.map(e => e.mesReferencia)
-  )).sort((a, b) => {
+  const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  const availableMonths = Array.from(new Set(expenses.map(e => e.mesReferencia))).sort((a, b) => {
     const [mesA, anoA] = a.split(' ');
     const [mesB, anoB] = b.split(' ');
     const dateA = new Date(`${anoA}-${String(monthNames.indexOf(mesA) + 1).padStart(2, '0')}-01`);
@@ -112,17 +103,17 @@ const APagar = () => {
 
     // Filtrando por mês específico
     if (sale.paymentMethod === "pix") {
-      const saleMonth = new Date(sale.paymentDate)
-        .toLocaleString('pt-BR', { month: 'long' })
-        .replace(/^./, c => c.toUpperCase()) + " " + new Date(sale.paymentDate).getFullYear();
+      const saleMonth = new Date(sale.paymentDate).toLocaleString('pt-BR', {
+        month: 'long'
+      }).replace(/^./, c => c.toUpperCase()) + " " + new Date(sale.paymentDate).getFullYear();
       if (saleMonth === selectedMonth) {
         return sum + sale.products.reduce((p, product) => p + product.saleValue, 0);
       }
     } else if (sale.installmentDates && sale.installmentValues) {
       const monthIndex = sale.installmentDates.findIndex(date => {
-        const installmentMonth = new Date(date)
-          .toLocaleString('pt-BR', { month: 'long' })
-          .replace(/^./, c => c.toUpperCase()) + " " + new Date(date).getFullYear();
+        const installmentMonth = new Date(date).toLocaleString('pt-BR', {
+          month: 'long'
+        }).replace(/^./, c => c.toUpperCase()) + " " + new Date(date).getFullYear();
         return installmentMonth === selectedMonth;
       });
       if (monthIndex >= 0 && sale.installmentValues[monthIndex]) {
@@ -137,17 +128,11 @@ const APagar = () => {
     acc[e.categoria] = (acc[e.categoria] || 0) + e.valorTotal;
     return acc;
   }, {} as Record<string, number>);
-
-  const [categoriaNome, categoriaValor] = Object.entries(categoriasAgrupadas)
-    .sort(([, a], [, b]) => b - a)[0] || ["Nenhuma", 0];
+  const [categoriaNome, categoriaValor] = Object.entries(categoriasAgrupadas).sort(([, a], [, b]) => b - a)[0] || ["Nenhuma", 0];
 
   // Última despesa
-  const ultimaDespesa = expenses.length > 0 
-    ? [...expenses].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())[0]
-    : null;
-
-  return (
-    <div className="min-h-screen bg-background">
+  const ultimaDespesa = expenses.length > 0 ? [...expenses].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())[0] : null;
+  return <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-card/80 backdrop-blur-sm border-b border-border shadow-md sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
@@ -183,33 +168,15 @@ const APagar = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="TODOS">TODOS</SelectItem>
-                {availableMonths.map(month => (
-                  <SelectItem key={month} value={month}>{month}</SelectItem>
-                ))}
+                {availableMonths.map(month => <SelectItem key={month} value={month}>{month}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div className="flex-1 max-w-xs relative">
             <Label htmlFor="search">Buscar</Label>
             <div className="relative">
-              <Input
-                id="search"
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-              >
+              <Input id="search" className="pl-8" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground">
                 <circle cx="11" cy="11" r="8"></circle>
                 <path d="m21 21-4.3-4.3"></path>
               </svg>
@@ -220,8 +187,8 @@ const APagar = () => {
         {/* Cards de Resumo */}
         <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto mb-8">
           <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 p-4 rounded-xl shadow-lg border border-blue-100 dark:border-blue-800/30 text-center group hover:scale-105 transition-transform">
-            <p className="text-xs font-medium text-blue-600 dark:text-blue-300 mb-1 group-hover:text-blue-700 transition-colors">
-              Total a receber<br/>
+            <p className="text-blue-600 dark:text-blue-300 mb-1 group-hover:text-blue-700 transition-colors font-bold text-lg">
+              Total a receber<br />
               <span className="text-[10px] opacity-75">({selectedMonth === "TODOS" ? "Todos os meses" : selectedMonth})</span>
             </p>
             <p className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
@@ -230,8 +197,8 @@ const APagar = () => {
           </div>
 
           <div className="bg-gradient-to-br from-rose-50 to-red-50 dark:from-rose-950/30 dark:to-red-950/30 p-4 rounded-xl shadow-lg border border-rose-100 dark:border-rose-800/30 text-center group hover:scale-105 transition-transform">
-            <p className="text-xs font-medium text-rose-600 dark:text-rose-300 mb-1 group-hover:text-rose-700 transition-colors">
-              Total a Pagar<br/>
+            <p className="text-rose-600 dark:text-rose-300 mb-1 group-hover:text-rose-700 transition-colors text-lg font-bold">
+              Total a Pagar<br />
               <span className="text-[10px] opacity-75">({selectedMonth === "TODOS" ? "Todos os meses" : selectedMonth})</span>
             </p>
             <p className="text-2xl font-bold bg-gradient-to-r from-rose-600 to-red-600 bg-clip-text text-transparent">
@@ -242,22 +209,12 @@ const APagar = () => {
 
         {/* Formulário */}
         <div className="mb-8 max-w-[70%] mx-auto">
-          <ExpenseForm 
-            onExpenseAdded={handleExpenseAdded}
-            editingExpense={editingExpense}
-            onExpenseUpdated={handleExpenseUpdated}
-          />
+          <ExpenseForm onExpenseAdded={handleExpenseAdded} editingExpense={editingExpense} onExpenseUpdated={handleExpenseUpdated} />
         </div>
 
         {/* Lista de Despesas */}
-        <ExpenseList 
-          expenses={filteredExpenses}
-          onEditExpense={handleEditExpense}
-          onDeleteExpense={handleDeleteExpense}
-        />
+        <ExpenseList expenses={filteredExpenses} onEditExpense={handleEditExpense} onDeleteExpense={handleDeleteExpense} />
       </main>
-    </div>
-  );
+    </div>;
 };
-
 export default APagar;
