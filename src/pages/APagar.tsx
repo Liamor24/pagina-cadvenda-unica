@@ -4,6 +4,7 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import type { Sale } from "@/components/SalesForm";
 import { Input } from "@/components/ui/input";
 import ExpenseForm from "@/components/ExpenseForm";
 import ExpenseList from "@/components/ExpenseList";
@@ -27,6 +28,15 @@ const APagar = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("TODOS");
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sales, setSales] = useState<Sale[]>(() => {
+    try {
+      const raw = localStorage.getItem('sales');
+      return raw ? JSON.parse(raw) as Sale[] : [];
+    } catch (e) {
+      console.error('Erro ao ler vendas do localStorage', e);
+      return [];
+    }
+  });
 
   // Carregar do localStorage
   useEffect(() => {
@@ -85,6 +95,42 @@ const APagar = () => {
   // Cálculos de resumo
   const totalMes = filteredExpenses.reduce((sum, e) => sum + e.valorTotal, 0);
   const totalGeral = expenses.reduce((sum, e) => sum + e.valorTotal, 0);
+
+  // Calcular total de vendas para o mês selecionado
+  const totalVendas = sales.reduce((sum, sale) => {
+    if (selectedMonth === "TODOS") {
+      // Para vendas PIX, usa o valor total
+      if (sale.paymentMethod === "pix") {
+        return sum + sale.products.reduce((p, product) => p + product.saleValue, 0);
+      }
+      // Para vendas parceladas, soma todas as parcelas
+      if (sale.installmentValues) {
+        return sum + sale.installmentValues.reduce((p, value) => p + value, 0);
+      }
+      return sum;
+    }
+
+    // Filtrando por mês específico
+    if (sale.paymentMethod === "pix") {
+      const saleMonth = new Date(sale.paymentDate)
+        .toLocaleString('pt-BR', { month: 'long' })
+        .replace(/^./, c => c.toUpperCase()) + " " + new Date(sale.paymentDate).getFullYear();
+      if (saleMonth === selectedMonth) {
+        return sum + sale.products.reduce((p, product) => p + product.saleValue, 0);
+      }
+    } else if (sale.installmentDates && sale.installmentValues) {
+      const monthIndex = sale.installmentDates.findIndex(date => {
+        const installmentMonth = new Date(date)
+          .toLocaleString('pt-BR', { month: 'long' })
+          .replace(/^./, c => c.toUpperCase()) + " " + new Date(date).getFullYear();
+        return installmentMonth === selectedMonth;
+      });
+      if (monthIndex >= 0 && sale.installmentValues[monthIndex]) {
+        return sum + sale.installmentValues[monthIndex];
+      }
+    }
+    return sum;
+  }, 0);
 
   // Categoria principal
   const categoriasAgrupadas = filteredExpenses.reduce((acc, e) => {
@@ -171,8 +217,17 @@ const APagar = () => {
           </div>
         </div>
 
-        {/* Card de Resumo */}
-        <div className="max-w-md mx-auto mb-8">
+        {/* Cards de Resumo */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto mb-8">
+          <Card className="bg-gradient-to-br from-card to-accent/5 p-6 rounded-xl shadow-[var(--shadow-card)] border border-border">
+            <CardTitle className="text-sm text-muted-foreground mb-1">
+              Total a receber ({selectedMonth === "TODOS" ? "Todos os meses" : selectedMonth})
+            </CardTitle>
+            <CardContent className="text-3xl font-bold text-foreground p-0">
+              R$ {totalVendas.toFixed(2)}
+            </CardContent>
+          </Card>
+
           <Card className="bg-gradient-to-br from-card to-red-50 dark:to-red-950/20 p-6 rounded-xl shadow-md border">
             <CardTitle className="text-sm text-muted-foreground mb-1">
               Total a Pagar ({selectedMonth === "TODOS" ? "Todos os meses" : selectedMonth})

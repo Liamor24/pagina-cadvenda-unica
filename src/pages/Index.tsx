@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { Expense } from "@/pages/APagar";
 import { Link } from "react-router-dom";
 
 const Index = () => {
@@ -22,6 +23,15 @@ const Index = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("total");
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [expenses, setExpenses] = useState<Expense[]>(() => {
+    try {
+      const raw = localStorage.getItem('expenses');
+      return raw ? JSON.parse(raw) as Expense[] : [];
+    } catch (e) {
+      console.error('Erro ao ler despesas do localStorage', e);
+      return [];
+    }
+  });
 
   useEffect(() => {
     try {
@@ -111,6 +121,25 @@ const Index = () => {
     return sum + saleTotal;
   }, 0);
 
+  // Calcula total de despesas para o mês selecionado
+  const totalExpenses = expenses.reduce((sum, expense) => {
+    if (selectedMonth === "total") {
+      return sum + expense.valorTotal;
+    }
+
+    const expenseMonth = new Date(expense.data)
+      .toLocaleString('pt-BR', { month: 'long' })
+      .replace(/^./, c => c.toUpperCase()) + " " + new Date(expense.data).getFullYear();
+
+    // Convertendo o formato do mês para coincidir com o formato das despesas
+    const selectedMonthFormatted = getMonthLabel(selectedMonth);
+
+    if (expenseMonth === selectedMonthFormatted) {
+      return sum + expense.valorTotal;
+    }
+    return sum;
+  }, 0);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       {/* Header */}
@@ -197,6 +226,12 @@ const Index = () => {
                 Total a receber ({selectedMonth === "total" ? "Todos os meses" : getMonthLabel(selectedMonth)})
               </p>
               <p className="text-3xl font-bold text-foreground">R$ {totalSales.toFixed(2)}</p>
+            </div>
+            <div className="bg-gradient-to-br from-card to-red-50 dark:to-red-950/20 p-6 rounded-xl shadow-[var(--shadow-card)] border border-border">
+              <p className="text-sm text-muted-foreground mb-1">
+                Total a Pagar ({selectedMonth === "total" ? "Todos os meses" : getMonthLabel(selectedMonth)})
+              </p>
+              <p className="text-3xl font-bold text-foreground">R$ {totalExpenses.toFixed(2)}</p>
             </div>
             <div className="bg-gradient-to-br from-card to-green-50 p-6 rounded-xl shadow-[var(--shadow-card)] border border-border">
               <p className="text-sm text-muted-foreground mb-1">Lucro Total</p>
