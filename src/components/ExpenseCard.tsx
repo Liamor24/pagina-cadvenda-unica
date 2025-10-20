@@ -49,12 +49,8 @@ const ExpenseCard = ({
     ? installments.reduce((s, it) => s + it.valorTotal, 0)
     : expense.valorTotal;
 
-  // valor da parcela no mês vigente: procurar parcela cuja mesReferencia
-  // corresponde ao mês atual
-  const now = new Date();
-  const currentMesRef = `${now.toLocaleString('pt-BR', { month: 'long' }).replace(/^./, c => c.toUpperCase())} ${now.getFullYear()}`;
-  const currentInstallment = installments ? installments.find(inst => inst.mesReferencia === currentMesRef) : null;
-  const currentValue = currentInstallment ? currentInstallment.valorTotal : (hasInstallments ? installments && installments[0].valorTotal : expense.valorTotal);
+  // Pegar valor da parcela baseado no mês de referência da despesa
+  const currentValue = expense.valorTotal;
 
   const isQuitado = expense.formaPagamento === "Parcelado" && expense.parcelaAtual === expense.parcelas;
 
@@ -80,7 +76,9 @@ const ExpenseCard = ({
 
               <div className="text-right">
                 <div className="text-lg font-bold">{formatCurrency(totalValue)}</div>
-                <div className="text-sm text-muted-foreground">{formatCurrency(currentValue)} (mês vigente)</div>
+                <div className="text-sm text-muted-foreground">
+                  {formatCurrency(currentValue)} ({expense.mesReferencia})
+                </div>
               </div>
             </div>
             <div className="mt-2">{getCategoryBadge(expense.categoria)}</div>
