@@ -6,6 +6,7 @@ import logo from "@/assets/ellas-logo.jpeg";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 
 const Index = () => {
@@ -20,6 +21,7 @@ const Index = () => {
   });
   const [selectedMonth, setSelectedMonth] = useState<string>("total");
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     try {
@@ -135,23 +137,51 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {/* Filter */}
+        {/* Filters */}
         {sales.length > 0 && (
-          <div className="mb-6 max-w-xs">
-            <Label htmlFor="month-filter" className="text-foreground mb-2 block">Filtrar por mês</Label>
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger id="month-filter" className="bg-card">
-                <SelectValue placeholder="Selecione o mês" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="total">Total (Todos os meses)</SelectItem>
-                {availableMonths.map(month => (
-                  <SelectItem key={month} value={month}>
-                    {getMonthLabel(month)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="mb-6 flex gap-4 items-end">
+            <div className="max-w-xs">
+              <Label htmlFor="month-filter" className="text-foreground mb-2 block">Filtrar por mês</Label>
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger id="month-filter" className="bg-card">
+                  <SelectValue placeholder="Selecione o mês" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="total">Total (Todos os meses)</SelectItem>
+                  {availableMonths.map(month => (
+                    <SelectItem key={month} value={month}>
+                      {getMonthLabel(month)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1 max-w-xs relative">
+              <Label htmlFor="search" className="text-foreground mb-2 block">Buscar</Label>
+              <div className="relative">
+                <Input
+                  id="search"
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                >
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.3-4.3"></path>
+                </svg>
+              </div>
+            </div>
           </div>
         )}
 
