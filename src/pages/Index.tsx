@@ -250,7 +250,6 @@ const Index = () => {
               </p>
             </div>
           </div>
-          </div>
         )}
 
         {/* Sales Form */}
