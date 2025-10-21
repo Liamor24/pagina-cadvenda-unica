@@ -12,15 +12,57 @@ import type { Expense } from "@/pages/APagar";
 import { Link } from "react-router-dom";
 
 const Index = () => {
-  const [sales, setSales] = useState<Sale[]>(() => {
-    try {
-      const raw = localStorage.getItem('sales');
-      return raw ? JSON.parse(raw) as Sale[] : [];
-    } catch (e) {
-      console.error('Erro ao ler vendas do localStorage', e);
-      return [];
-    }
-  });
+  const [sales, setSales] = useState<Sale[]>([]);
+
+  // Fetch sales from Supabase when component mounts
+  useEffect(() => {
+    const fetchSales = async () => {
+      try {
+        const { data: salesData, error: salesError } = await supabase
+          .from('sales')
+          .select(`
+            *,
+            products (*)
+          `)
+          .order('created_at', { ascending: false });
+
+        if (salesError) throw salesError;
+
+        if (salesData) {
+          // Transform the data to match the Sale type
+          const transformedSales: Sale[] = salesData.map(sale => ({
+            id: sale.id,
+            customerName: sale.customer_name,
+            purchaseDate: sale.purchase_date,
+            paymentDate: sale.payment_date,
+            paymentMethod: sale.payment_method,
+            installments: sale.installments,
+            installmentValues: sale.installment_values,
+            installmentDates: sale.installment_dates,
+            advancePayment: sale.advance_payment,
+            discount: sale.discount,
+            products: sale.products.map(product => ({
+              productRef: product.product_ref,
+              productName: product.product_name,
+              purchaseValue: product.purchase_value,
+              saleValue: product.sale_value
+            }))
+          }));
+
+          setSales(transformedSales);
+        }
+      } catch (error) {
+        console.error('Error fetching sales:', error);
+        toast({
+          title: "Erro ao carregar vendas",
+          description: "Houve um erro ao carregar as vendas do banco de dados.",
+          variant: "destructive"
+        });
+      }
+    };
+
+    fetchSales();
+  }, []);
   const [selectedMonth, setSelectedMonth] = useState<string>("total");
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -34,13 +76,7 @@ const Index = () => {
     }
   });
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('sales', JSON.stringify(sales));
-    } catch (e) {
-      console.error('Erro ao salvar vendas no localStorage', e);
-    }
-  }, [sales]);
+  // Removed localStorage persistence since we're using Supabase now
 
   const handleSaleAdded = async (sale: Sale) => {
     // Persist sale to Supabase, then update local state with returned id
