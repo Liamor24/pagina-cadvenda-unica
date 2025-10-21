@@ -468,6 +468,7 @@ const Index = () => {
           onDeleteSale={handleDeleteSale}
           onEditSale={handleEditSale}
           onUpdateSale={handleSaleUpdated}
+          selectedMonth={selectedMonth}
         />
       </main>
 

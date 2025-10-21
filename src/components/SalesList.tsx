@@ -26,9 +26,10 @@ interface SalesListProps {
   onDeleteSale: (saleId: string) => void;
   onEditSale: (sale: Sale) => void;
   onUpdateSale?: (sale: Partial<Sale> & { id: string }) => void | Promise<void>;
+    selectedMonth?: string; // Make selectedMonth optional
 }
 
-export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale }: SalesListProps) => {
+export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale, selectedMonth }: SalesListProps) => {
   if (sales.length === 0) {
     return (
       <Card className="w-full shadow-lg rounded-xl border">
@@ -85,6 +86,34 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale }: Sal
             const currentInstallment = sale.paymentMethod === "installment" && sale.installmentValues 
               ? sale.installmentValues[0] 
               : totalSaleValue;
+            const installmentForSelectedMonth = (() => {
+              if (sale.paymentMethod === 'pix') {
+                if (selectedMonth === 'total') return totalSaleValue;
+                const paymentDate = new Date(sale.paymentDate);
+                const saleMonth = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}`;
+                return saleMonth === selectedMonth ? totalSaleValue : 0;
+              }
+
+              if (sale.paymentMethod === 'installment' && sale.installmentValues && sale.installmentDates) {
+                if (selectedMonth === 'total') {
+                  const now = new Date();
+                  const nextIdx = sale.installmentDates.findIndex(d => !d || new Date(d) > now);
+                  const idx = nextIdx === -1 ? sale.installmentValues.length - 1 : nextIdx;
+                  return sale.installmentValues[idx] ?? 0;
+                }
+
+                const idx = sale.installmentDates.findIndex(d => {
+                  if (!d) return false;
+                  const date = new Date(d);
+                  const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                  return month === selectedMonth;
+                });
+                if (idx === -1) return 0;
+                return sale.installmentValues[idx] ?? 0;
+              }
+
+              return 0;
+            })();
 
             return (
               <Card 
@@ -105,20 +134,15 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale }: Sal
                       <div className="flex items-center justify-between gap-4">
                         <div>
                           <h3 className="text-lg font-semibold text-foreground">{sale.customerName}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(sale.paymentDate).toLocaleDateString('pt-BR')}
-                          </p>
+                          <p className="text-sm text-muted-foreground">{new Date(sale.paymentDate).toLocaleDateString('pt-BR')}</p>
                         </div>
 
                         <div className="text-right">
                           <div className="text-lg font-bold">R$ {totalSaleValue.toFixed(2)}</div>
-                          <div className="text-sm text-muted-foreground">
-                            R$ {currentInstallment.toFixed(2)} (mês vigente)
-                          </div>
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
@@ -197,7 +221,7 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale }: Sal
                       <Calendar className="w-5 h-5 text-primary mt-1" />
                       <div>
                         <p className="text-xs text-muted-foreground">Parcela do Mês</p>
-                        <p className="text-lg font-bold text-foreground">R$ {currentInstallment.toFixed(2)}</p>
+                        <p className="text-lg font-bold text-foreground">R$ {installmentForSelectedMonth.toFixed(2)}</p>
                       </div>
                     </div>
                   </div>
