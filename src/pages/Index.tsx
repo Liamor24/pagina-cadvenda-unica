@@ -74,7 +74,7 @@ const Index = () => {
           sale_value: p.saleValue,
         }));
 
-        const { error: prodError } = await supabase.from('sales_products').insert(productsToInsert);
+        const { error: prodError } = await supabase.from('products').insert(productsToInsert);
         if (prodError) throw prodError;
       }
 
@@ -110,7 +110,7 @@ const Index = () => {
       if (saleError) throw saleError;
 
       // Replace products (simple approach: delete existing then insert new)
-      const { error: delError } = await supabase.from('sales_products').delete().eq('sale_id', updatedSale.id);
+      const { error: delError } = await supabase.from('products').delete().eq('sale_id', updatedSale.id);
       if (delError) throw delError;
 
       if (updatedSale.products && updatedSale.products.length > 0) {
@@ -121,7 +121,7 @@ const Index = () => {
           purchase_value: p.purchaseValue,
           sale_value: p.saleValue,
         }));
-        const { error: prodError } = await supabase.from('sales_products').insert(productsToInsert);
+        const { error: prodError } = await supabase.from('products').insert(productsToInsert);
         if (prodError) throw prodError;
       }
 
