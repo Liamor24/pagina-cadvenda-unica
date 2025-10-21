@@ -25,6 +25,7 @@ export interface Sale {
   installmentValues?: number[];
   installmentDates?: string[];
   advancePayment?: number;
+  discount?: number;
   products: Product[];
 }
 
@@ -68,6 +69,7 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
   const [installmentValues, setInstallmentValues] = useState<string[]>([""]);
   const [manuallyEditedInstallments, setManuallyEditedInstallments] = useState<boolean[]>([false]);
   const [advancePayment, setAdvancePayment] = useState("");
+  const [discount, setDiscount] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
 
@@ -79,6 +81,7 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
       setPaymentMethod(editingSale.paymentMethod);
       setProducts(editingSale.products);
       setAdvancePayment(editingSale.advancePayment?.toString() || "");
+  setDiscount(editingSale.discount?.toString() || "");
       
       if (editingSale.paymentMethod === "installment" && editingSale.installments && editingSale.installmentValues) {
         setInstallments(editingSale.installments);
@@ -92,7 +95,7 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
   const totalInstallments = installmentValues.reduce((sum, val) => sum + parseFloat(val || "0"), 0);
   const totalPurchaseValue = products.reduce((sum, p) => sum + p.purchaseValue, 0);
   const totalSaleValue = products.reduce((sum, p) => sum + p.saleValue, 0);
-  const totalProfit = totalSaleValue - totalPurchaseValue;
+  const totalProfit = totalSaleValue - totalPurchaseValue - parseFloat(discount || "0");
 
   const handleInstallmentsChange = (num: number) => {
     setInstallments(num);
@@ -105,7 +108,8 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
     }
     
     const advance = parseFloat(advancePayment || "0");
-    const remainingValue = totalSaleValue - advance;
+  const disc = parseFloat(discount || "0");
+  const remainingValue = totalSaleValue - advance - disc;
     
     if (remainingValue > 0) {
       const valuePerInstallment = (remainingValue / num).toFixed(2);
@@ -126,7 +130,8 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
     newEdited[index] = true;
     
     const advance = parseFloat(advancePayment || "0");
-    const remainingValue = totalSaleValue - advance;
+  const disc = parseFloat(discount || "0");
+  const remainingValue = totalSaleValue - advance - disc;
     
     let totalCommitted = 0;
     newValues.forEach((val, i) => {
@@ -186,7 +191,7 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
       if (paymentMethod === "installment" && installments > 0) {
         const newTotalSaleValue = newProducts.reduce((sum, p) => sum + p.saleValue, 0);
         const advance = parseFloat(advancePayment || "0");
-        const remainingValue = newTotalSaleValue - advance;
+  const remainingValue = newTotalSaleValue - advance - disc;
         const valuePerInstallment = (remainingValue / installments).toFixed(2);
         
         const newValues = installmentValues.map((val, i) => {
@@ -222,7 +227,7 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
     if (paymentMethod === "installment" && installments > 0 && newProducts.length > 0) {
       const newTotalSaleValue = newProducts.reduce((sum, p) => sum + p.saleValue, 0);
       const advance = parseFloat(advancePayment || "0");
-      const remainingValue = newTotalSaleValue - advance;
+  const remainingValue = newTotalSaleValue - advance - disc;
       const valuePerInstallment = (remainingValue / installments).toFixed(2);
       
       const newValues = installmentValues.map((val, i) => {
@@ -277,6 +282,7 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
       installmentValues: paymentMethod === "installment" ? installmentValues.map(v => parseFloat(v)) : undefined,
       installmentDates: paymentMethod === "installment" ? calculateInstallmentDates(paymentDate, installments) : undefined,
       advancePayment: advancePayment ? parseFloat(advancePayment) : undefined,
+      discount: discount ? parseFloat(discount) : undefined,
       products: [...products],
     };
 
@@ -303,6 +309,7 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
     setInstallmentValues([""]);
     setManuallyEditedInstallments([false]);
     setAdvancePayment("");
+  setDiscount("");
     setProducts([]);
     setEditingProductId(null);
 
