@@ -242,8 +242,50 @@ const Index = () => {
   };
 
   const totalProfit = filteredSales.reduce((sum, sale) => {
-    const saleProfit = sale.products.reduce((p, product) => p + (product.saleValue - product.purchaseValue), 0);
-    return sum + saleProfit;
+    // If showing all months, include full sale profit
+    if (selectedMonth === 'total') {
+      const saleProfit = sale.products.reduce((p, product) => p + (product.saleValue - product.purchaseValue), 0);
+      return sum + saleProfit;
+    }
+
+    // For a specific month:
+    if (sale.paymentMethod === 'pix') {
+      const paymentDate = new Date(sale.paymentDate);
+      const saleMonth = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}`;
+      if (saleMonth === selectedMonth) {
+        const saleProfit = sale.products.reduce((p, product) => p + (product.saleValue - product.purchaseValue), 0);
+        return sum + saleProfit;
+      }
+      return sum;
+    }
+
+    if (sale.paymentMethod === 'installment' && sale.installmentValues && sale.installmentDates) {
+      const saleTotal = sale.products.reduce((p, product) => p + product.saleValue, 0);
+      const totalPurchase = sale.products.reduce((p, product) => p + product.purchaseValue, 0);
+
+      // Sum profit share for each installment that belongs to selectedMonth
+      const contrib = sale.installmentValues.reduce((acc, val, idx) => {
+        const dateStr = sale.installmentDates?.[idx];
+        if (!dateStr) return acc; // skip installments without a scheduled date
+        const d = new Date(dateStr);
+        const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (m !== selectedMonth) return acc;
+
+        if (saleTotal > 0) {
+          // allocate purchase proportionally to saleValue
+          const purchaseAllocated = val * (totalPurchase / saleTotal);
+          acc += (val - purchaseAllocated);
+        } else {
+          // fallback: if saleTotal is 0, treat profit as 0 for safety
+          acc += 0;
+        }
+        return acc;
+      }, 0);
+
+      return sum + contrib;
+    }
+
+    return sum;
   }, 0);
   
   const totalSales = filteredSales.reduce((sum, sale) => {
