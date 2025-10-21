@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Sale } from "./SalesForm";
-import { Calendar, TrendingUp, DollarSign, Trash2, Pencil } from "lucide-react";
+import { Calendar, TrendingUp, DollarSign, Trash2, Pencil, Check, RotateCcw } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -25,6 +25,7 @@ interface SalesListProps {
   sales: Sale[];
   onDeleteSale: (saleId: string) => void;
   onEditSale: (sale: Sale) => void;
+  onUpdateSale?: (sale: Sale) => void;
 }
 
 export const SalesList = ({ sales, onDeleteSale, onEditSale }: SalesListProps) => {
@@ -225,6 +226,39 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale }: SalesListProps) =
                                       Pago
                                     </Badge>
                                   )}
+                                  <div className="flex items-center gap-2 ml-3">
+                                    {/* Marcar como Pago */}
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={async () => {
+                                        const updatedSale: Sale = { ...sale } as Sale;
+                                        const dates = Array.isArray(updatedSale.installmentDates) ? [...(updatedSale.installmentDates as (string | null)[])] : [];
+                                        dates[index] = new Date().toISOString().split('T')[0];
+                                        updatedSale.installmentDates = dates as string[];
+                                        if (typeof (onUpdateSale) === 'function') await onUpdateSale(updatedSale);
+                                      }}
+                                      title="Marcar como Pago"
+                                    >
+                                      <Check className="h-4 w-4" />
+                                    </Button>
+
+                                    {/* Reverter pagamento */}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={async () => {
+                                        const updatedSale: Sale = { ...sale } as Sale;
+                                        const dates = Array.isArray(updatedSale.installmentDates) ? [...(updatedSale.installmentDates as (string | null)[])] : [];
+                                        dates[index] = null as any;
+                                        updatedSale.installmentDates = dates as unknown as string[];
+                                        if (typeof (onUpdateSale) === 'function') await onUpdateSale(updatedSale);
+                                      }}
+                                      title="Reverter pagamento"
+                                    >
+                                      <RotateCcw className="h-4 w-4" />
+                                    </Button>
+                                  </div>
                                 </div>
                               </div>
                             );

@@ -363,6 +363,7 @@ const Index = () => {
           sales={filteredSales} 
           onDeleteSale={handleDeleteSale}
           onEditSale={handleEditSale}
+          onUpdateSale={handleSaleUpdated}
         />
       </main>
 
