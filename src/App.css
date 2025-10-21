@@ -3,6 +3,9 @@
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  /* garantir que o conteúdo apareça sobre o fundo com contraste */
+  position: relative;
+  z-index: 10;
 }
 
 .logo {
