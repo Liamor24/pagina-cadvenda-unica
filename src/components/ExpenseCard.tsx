@@ -75,10 +75,12 @@ const ExpenseCard = ({
               </div>
 
               <div className="text-right">
-                <div className="text-lg font-bold">{formatCurrency(totalValue)}</div>
-                <div className="text-sm text-muted-foreground">
-                  {formatCurrency(currentValue)} ({expense.mesReferencia})
-                </div>
+                <div className="text-lg font-bold">{formatCurrency(totalValue)} {expense.formaPagamento === "Parcelado" && <span className="text-sm font-normal text-muted-foreground">(Total)</span>}</div>
+                {expense.formaPagamento === "Parcelado" && (
+                  <div className="text-sm text-muted-foreground">
+                    {formatCurrency(currentValue)} ({expense.mesReferencia})
+                  </div>
+                )}
               </div>
             </div>
             <div className="mt-2">{getCategoryBadge(expense.categoria)}</div>
