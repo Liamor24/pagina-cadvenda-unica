@@ -138,7 +138,8 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale, selec
                         </div>
 
                         <div className="text-right">
-                          <div className="text-lg font-bold">R$ {totalSaleValue.toFixed(2)}</div>
+                          <div className="text-sm text-muted-foreground">Total (descontos aplicados)</div>
+                          <div className="text-lg font-bold">R$ {(totalSaleValue - (sale.discount || 0)).toFixed(2)}</div>
                         </div>
                       </div>
                     </div>

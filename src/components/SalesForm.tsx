@@ -530,32 +530,62 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
             </div>
           </RadioGroup>
 
-          <div className="mt-6">
-            <Label htmlFor="advancePayment" className="text-foreground">Entrada / Adiantamento (Opcional)</Label>
-            <Input
-              id="advancePayment"
-              type="number"
-              step="0.01"
-              value={advancePayment}
-              onChange={(e) => {
-                setAdvancePayment(e.target.value);
-                if (paymentMethod === "installment" && installments > 0 && totalSaleValue > 0) {
-                  const advance = parseFloat(e.target.value || "0");
-                  const remainingValue = totalSaleValue - advance;
-                  const valuePerInstallment = (remainingValue / installments).toFixed(2);
-                  
-                  const newValues = installmentValues.map((val, i) => {
-                    return manuallyEditedInstallments[i] ? val : valuePerInstallment;
-                  });
-                  setInstallmentValues(newValues);
-                }
-              }}
-              className="mt-1 max-w-xs"
-              placeholder="R$ 0,00"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Valor recebido antecipadamente, será abatido do total
-            </p>
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="advancePayment" className="text-foreground">Entrada / Adiantamento (Opcional)</Label>
+              <Input
+                id="advancePayment"
+                type="number"
+                step="0.01"
+                value={advancePayment}
+                onChange={(e) => {
+                  setAdvancePayment(e.target.value);
+                  if (paymentMethod === "installment" && installments > 0 && totalSaleValue > 0) {
+                    const advance = parseFloat(e.target.value || "0");
+                    const disc = parseFloat(discount || "0");
+                    const remainingValue = totalSaleValue - advance - disc;
+                    const valuePerInstallment = (remainingValue / installments).toFixed(2);
+
+                    const newValues = installmentValues.map((val, i) => {
+                      return manuallyEditedInstallments[i] ? val : valuePerInstallment;
+                    });
+                    setInstallmentValues(newValues);
+                  }
+                }}
+                className="mt-1 max-w-xs"
+                placeholder="R$ 0,00"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Valor recebido antecipadamente, será abatido do total
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="discount" className="text-foreground">Desconto (Opcional)</Label>
+              <Input
+                id="discount"
+                type="number"
+                step="0.01"
+                value={discount}
+                onChange={(e) => {
+                  setDiscount(e.target.value);
+                  if (paymentMethod === "installment" && installments > 0 && totalSaleValue > 0) {
+                    const advance = parseFloat(advancePayment || "0");
+                    const disc = parseFloat(e.target.value || "0");
+                    const remainingValue = totalSaleValue - advance - disc;
+                    const valuePerInstallment = (remainingValue / installments).toFixed(2);
+
+                    const newValues = installmentValues.map((val, i) => {
+                      return manuallyEditedInstallments[i] ? val : valuePerInstallment;
+                    });
+                    setInstallmentValues(newValues);
+                  }
+                }}
+                className="mt-1 max-w-xs"
+                placeholder="R$ 0,00"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Desconto que será abatido do total</p>
+            </div>
           </div>
 
           {paymentMethod === "installment" && (

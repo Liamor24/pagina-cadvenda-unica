@@ -56,6 +56,7 @@ const Index = () => {
           installment_values: sale.installmentValues ?? null,
           installment_dates: sale.installmentDates ?? null,
           advance_payment: sale.advancePayment ?? null,
+          discount: sale.discount ?? null,
         })
         .select('id')
         .single();
@@ -137,6 +138,7 @@ const Index = () => {
           installment_values: merged.installmentValues ?? null,
           installment_dates: merged.installmentDates ?? null,
           advance_payment: merged.advancePayment ?? null,
+          discount: merged.discount ?? null,
         })
         .eq('id', merged.id);
 
@@ -282,7 +284,11 @@ const Index = () => {
         return acc;
       }, 0);
 
-      return sum + contrib;
+      // subtract proportional discount share for installments in this month
+      const totalInstallmentSum = sale.installmentValues.reduce((a, b) => a + b, 0);
+      const discountAllocated = totalInstallmentSum > 0 ? (sale.discount || 0) * (contrib / (saleTotal - totalPurchase)) : 0;
+
+      return sum + contrib - discountAllocated;
     }
 
     return sum;
@@ -291,7 +297,7 @@ const Index = () => {
   const totalSales = filteredSales.reduce((sum, sale) => {
     // If showing all months, include the full sale total
     if (selectedMonth === 'total') {
-      const saleTotal = sale.products.reduce((p, product) => p + product.saleValue, 0);
+      const saleTotal = sale.products.reduce((p, product) => p + product.saleValue, 0) - (sale.discount || 0);
       return sum + saleTotal;
     }
 
@@ -300,7 +306,7 @@ const Index = () => {
       const paymentDate = new Date(sale.paymentDate);
       const saleMonth = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}`;
       if (saleMonth === selectedMonth) {
-        const saleTotal = sale.products.reduce((p, product) => p + product.saleValue, 0);
+        const saleTotal = sale.products.reduce((p, product) => p + product.saleValue, 0) - (sale.discount || 0);
         return sum + saleTotal;
       }
       return sum;
