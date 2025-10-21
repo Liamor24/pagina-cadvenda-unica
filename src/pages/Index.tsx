@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { SalesForm, type Sale } from "@/components/SalesForm";
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import { SalesList } from "@/components/SalesList";
 import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/ellas-logo.jpeg";

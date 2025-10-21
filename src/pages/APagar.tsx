@@ -8,7 +8,7 @@ import type { Sale } from "@/components/SalesForm";
 import { Input } from "@/components/ui/input";
 import ExpenseForm from "@/components/ExpenseForm";
 import ExpenseList from "@/components/ExpenseList";
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import logo from "@/assets/ellas-logo.jpeg";
 export interface Expense {
   id: string;
