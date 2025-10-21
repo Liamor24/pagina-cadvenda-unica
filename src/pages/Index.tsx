@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { SalesForm, type Sale } from "@/components/SalesForm";
+import { supabase } from '@/lib/supabaseClient';
 import { SalesList } from "@/components/SalesList";
 import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/ellas-logo.jpeg";
@@ -41,18 +42,99 @@ const Index = () => {
     }
   }, [sales]);
 
-  const handleSaleAdded = (sale: Sale) => {
-    setSales(prev => [sale, ...prev]);
-    setEditingSale(null);
+  const handleSaleAdded = async (sale: Sale) => {
+    // Persist sale to Supabase, then update local state with returned id
+    try {
+      const { data: saleInsert, error: saleError } = await supabase
+        .from('sales')
+        .insert({
+          customer_name: sale.customerName,
+          purchase_date: sale.purchaseDate,
+          payment_date: sale.paymentDate,
+          payment_method: sale.paymentMethod,
+          installments: sale.installments ?? null,
+          installment_values: sale.installmentValues ?? null,
+          installment_dates: sale.installmentDates ?? null,
+          advance_payment: sale.advancePayment ?? null,
+        })
+        .select('id')
+        .single();
+
+      if (saleError || !saleInsert) throw saleError || new Error('Failed to insert sale');
+
+      const saleId = saleInsert.id;
+
+      // Insert products linked to sale
+      if (sale.products && sale.products.length > 0) {
+        const productsToInsert = sale.products.map(p => ({
+          sale_id: saleId,
+          product_ref: p.productRef,
+          product_name: p.productName,
+          purchase_value: p.purchaseValue,
+          sale_value: p.saleValue,
+        }));
+
+        const { error: prodError } = await supabase.from('sales_products').insert(productsToInsert);
+        if (prodError) throw prodError;
+      }
+
+      // Update local state using the sale id from database
+      const persistedSale: Sale = { ...sale, id: saleId };
+      setSales(prev => [persistedSale, ...prev]);
+      setEditingSale(null);
+    } catch (err) {
+      console.error('Error saving sale to Supabase:', err);
+      // Fallback: keep locally
+      setSales(prev => [sale, ...prev]);
+      setEditingSale(null);
+    }
   };
 
-  const handleSaleUpdated = (updatedSale: Sale) => {
-    setSales(prev => prev.map(s => s.id === updatedSale.id ? updatedSale : s));
-    setEditingSale(null);
-    toast({
-      title: "Venda atualizada!",
-      description: "A venda foi atualizada com sucesso.",
-    });
+  const handleSaleUpdated = async (updatedSale: Sale) => {
+    try {
+      // Update sale row
+      const { error: saleError } = await supabase
+        .from('sales')
+        .update({
+          customer_name: updatedSale.customerName,
+          purchase_date: updatedSale.purchaseDate,
+          payment_date: updatedSale.paymentDate,
+          payment_method: updatedSale.paymentMethod,
+          installments: updatedSale.installments ?? null,
+          installment_values: updatedSale.installmentValues ?? null,
+          installment_dates: updatedSale.installmentDates ?? null,
+          advance_payment: updatedSale.advancePayment ?? null,
+        })
+        .eq('id', updatedSale.id);
+
+      if (saleError) throw saleError;
+
+      // Replace products (simple approach: delete existing then insert new)
+      const { error: delError } = await supabase.from('sales_products').delete().eq('sale_id', updatedSale.id);
+      if (delError) throw delError;
+
+      if (updatedSale.products && updatedSale.products.length > 0) {
+        const productsToInsert = updatedSale.products.map(p => ({
+          sale_id: updatedSale.id,
+          product_ref: p.productRef,
+          product_name: p.productName,
+          purchase_value: p.purchaseValue,
+          sale_value: p.saleValue,
+        }));
+        const { error: prodError } = await supabase.from('sales_products').insert(productsToInsert);
+        if (prodError) throw prodError;
+      }
+
+      setSales(prev => prev.map(s => s.id === updatedSale.id ? updatedSale : s));
+      setEditingSale(null);
+      toast({ title: "Venda atualizada!", description: "A venda foi atualizada com sucesso." });
+    } catch (err) {
+      console.error('Error updating sale in Supabase:', err);
+      // Fallback to local update
+      setSales(prev => prev.map(s => s.id === updatedSale.id ? updatedSale : s));
+      setEditingSale(null);
+      toast({ title: "Venda atualizada!", description: "A venda foi atualizada localmente (erro no servidor)." });
+    }
   };
 
   const handleEditSale = (sale: Sale) => {
@@ -61,12 +143,18 @@ const Index = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDeleteSale = (saleId: string) => {
-    setSales(prev => prev.filter(s => s.id !== saleId));
-    toast({
-      title: "Venda removida!",
-      description: "A venda foi excluída com sucesso.",
-    });
+  const handleDeleteSale = async (saleId: string) => {
+    try {
+      const { error } = await supabase.from('sales').delete().eq('id', saleId);
+      if (error) throw error;
+      setSales(prev => prev.filter(s => s.id !== saleId));
+      toast({ title: "Venda removida!", description: "A venda foi excluída com sucesso." });
+    } catch (err) {
+      console.error('Error deleting sale from Supabase:', err);
+      // Fallback: remove locally
+      setSales(prev => prev.filter(s => s.id !== saleId));
+      toast({ title: "Venda removida!", description: "A venda foi excluída localmente (erro no servidor)." });
+    }
   };
 
   // Função para filtrar vendas por mês

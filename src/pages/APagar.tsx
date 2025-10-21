@@ -8,6 +8,7 @@ import type { Sale } from "@/components/SalesForm";
 import { Input } from "@/components/ui/input";
 import ExpenseForm from "@/components/ExpenseForm";
 import ExpenseList from "@/components/ExpenseList";
+import { supabase } from '@/lib/supabaseClient';
 import logo from "@/assets/ellas-logo.jpeg";
 export interface Expense {
   id: string;
@@ -52,12 +53,56 @@ const APagar = () => {
   useEffect(() => {
     localStorage.setItem('expenses', JSON.stringify(expenses));
   }, [expenses]);
-  const handleExpenseAdded = (newExpenses: Expense[]) => {
-    setExpenses([...expenses, ...newExpenses]);
+  const handleExpenseAdded = async (newExpenses: Expense[]) => {
+    try {
+      // Insert expenses and/or installments
+      for (const exp of newExpenses) {
+        const { data: inserted, error } = await supabase.from('expenses').insert({
+          descricao: exp.descricao,
+          categoria: exp.categoria,
+          data: exp.data,
+          valor_total: exp.valorTotal,
+          forma_pagamento: exp.formaPagamento,
+          parcelas: exp.parcelas ?? null,
+          parcela_atual: exp.parcelaAtual ?? null,
+          mes_referencia: exp.mesReferencia,
+          observacao: exp.observacao ?? null,
+        }).select('id').single();
+
+        if (error) throw error;
+
+        // If there is a need to create expense_installments, that would be here
+        const persisted = { ...exp, id: inserted.id };
+        setExpenses(prev => [...prev, persisted]);
+      }
+    } catch (err) {
+      console.error('Error inserting expenses to Supabase:', err);
+      // fallback local
+      setExpenses(prev => [...prev, ...newExpenses]);
+    }
   };
-  const handleExpenseUpdated = (updatedExpense: Expense) => {
-    setExpenses(expenses.map(exp => exp.id === updatedExpense.id ? updatedExpense : exp));
-    setEditingExpense(null);
+  const handleExpenseUpdated = async (updatedExpense: Expense) => {
+    try {
+      const { error } = await supabase.from('expenses').update({
+        descricao: updatedExpense.descricao,
+        categoria: updatedExpense.categoria,
+        data: updatedExpense.data,
+        valor_total: updatedExpense.valorTotal,
+        forma_pagamento: updatedExpense.formaPagamento,
+        parcelas: updatedExpense.parcelas ?? null,
+        parcela_atual: updatedExpense.parcelaAtual ?? null,
+        mes_referencia: updatedExpense.mesReferencia,
+        observacao: updatedExpense.observacao ?? null,
+      }).eq('id', updatedExpense.id);
+
+      if (error) throw error;
+      setExpenses(expenses.map(exp => exp.id === updatedExpense.id ? updatedExpense : exp));
+      setEditingExpense(null);
+    } catch (err) {
+      console.error('Error updating expense in Supabase:', err);
+      setExpenses(expenses.map(exp => exp.id === updatedExpense.id ? updatedExpense : exp));
+      setEditingExpense(null);
+    }
   };
   const handleEditExpense = (expense: Expense) => {
     setEditingExpense(expense);
@@ -66,8 +111,15 @@ const APagar = () => {
       behavior: 'smooth'
     });
   };
-  const handleDeleteExpense = (expenseId: string) => {
-    setExpenses(expenses.filter(exp => exp.id !== expenseId));
+  const handleDeleteExpense = async (expenseId: string) => {
+    try {
+      const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
+      if (error) throw error;
+      setExpenses(expenses.filter(exp => exp.id !== expenseId));
+    } catch (err) {
+      console.error('Error deleting expense from Supabase:', err);
+      setExpenses(expenses.filter(exp => exp.id !== expenseId));
+    }
   };
 
   // Filtrar despesas por mês
