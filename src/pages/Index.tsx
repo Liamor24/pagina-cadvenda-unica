@@ -95,9 +95,18 @@ const Index = () => {
 
   // Gerar lista de meses disponíveis das vendas (ordem cronológica)
   const availableMonths = Array.from(new Set(
-    sales.map(sale => {
-      const date = new Date(sale.paymentDate);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    sales.flatMap(sale => {
+      if (sale.paymentMethod === "pix") {
+        const date = new Date(sale.paymentDate);
+        return [`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`];
+      } else if (sale.installmentDates) {
+        // Para vendas parceladas, inclui todas as datas de parcelas
+        return sale.installmentDates.map(dateStr => {
+          const date = new Date(dateStr);
+          return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        });
+      }
+      return [];
     })
   )).sort();
 
@@ -217,31 +226,31 @@ const Index = () => {
         {/* Statistics Cards */}
         {sales.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8 max-w-4xl mx-auto">
-            <div className="bg-gradient-to-br from-violet-50 to-fuchsia-50 dark:from-violet-950/30 dark:to-fuchsia-950/30 p-4 rounded-xl shadow-lg border border-violet-100 dark:border-violet-800/30 text-center group hover:scale-105 transition-transform">
-              <p className="text-xs font-medium text-violet-600 dark:text-violet-300 mb-1 group-hover:text-violet-700 transition-colors">Total de Vendas</p>
-              <p className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">{filteredSales.length}</p>
+            <div className="bg-gradient-to-br from-violet-50 to-fuchsia-50 dark:from-violet-950/30 dark:to-fuchsia-950/30 p-6 rounded-2xl shadow-lg border border-violet-100/50 dark:border-violet-800/30 text-center group hover:scale-105 transition-transform">
+              <p className="text-sm font-semibold text-violet-700 dark:text-violet-300 mb-2 group-hover:text-violet-800 transition-colors">Total de Vendas</p>
+              <p className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">{filteredSales.length}</p>
             </div>
-            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 p-4 rounded-xl shadow-lg border border-blue-100 dark:border-blue-800/30 text-center group hover:scale-105 transition-transform">
-              <p className="text-xs font-medium text-blue-600 dark:text-blue-300 mb-1 group-hover:text-blue-700 transition-colors">
+            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 p-6 rounded-2xl shadow-lg border border-blue-100/50 dark:border-blue-800/30 text-center group hover:scale-105 transition-transform">
+              <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2 group-hover:text-blue-800 transition-colors">
                 Total a receber<br/>
-                <span className="text-[10px] opacity-75">({selectedMonth === "total" ? "Todos os meses" : getMonthLabel(selectedMonth)})</span>
+                <span className="text-xs opacity-75">({selectedMonth === "total" ? "Todos os meses" : getMonthLabel(selectedMonth)})</span>
               </p>
-              <p className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+              <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
                 R$ {totalSales.toFixed(2)}
               </p>
             </div>
-            <div className="bg-gradient-to-br from-rose-50 to-red-50 dark:from-rose-950/30 dark:to-red-950/30 p-4 rounded-xl shadow-lg border border-rose-100 dark:border-rose-800/30 text-center group hover:scale-105 transition-transform">
-              <p className="text-xs font-medium text-rose-600 dark:text-rose-300 mb-1 group-hover:text-rose-700 transition-colors">
+            <div className="bg-gradient-to-br from-rose-50 to-red-50 dark:from-rose-950/30 dark:to-red-950/30 p-6 rounded-2xl shadow-lg border border-rose-100/50 dark:border-rose-800/30 text-center group hover:scale-105 transition-transform">
+              <p className="text-sm font-semibold text-rose-700 dark:text-rose-300 mb-2 group-hover:text-rose-800 transition-colors">
                 Total a Pagar<br/>
-                <span className="text-[10px] opacity-75">({selectedMonth === "total" ? "Todos os meses" : getMonthLabel(selectedMonth)})</span>
+                <span className="text-xs opacity-75">({selectedMonth === "total" ? "Todos os meses" : getMonthLabel(selectedMonth)})</span>
               </p>
-              <p className="text-2xl font-bold bg-gradient-to-r from-rose-600 to-red-600 bg-clip-text text-transparent">
+              <p className="text-3xl font-bold bg-gradient-to-r from-rose-600 to-red-600 bg-clip-text text-transparent">
                 R$ {totalExpenses.toFixed(2)}
               </p>
             </div>
-            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 p-4 rounded-xl shadow-lg border border-emerald-100 dark:border-emerald-800/30 text-center group hover:scale-105 transition-transform">
-              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-300 mb-1 group-hover:text-emerald-700 transition-colors">Lucro Total</p>
-              <p className={`text-2xl font-bold ${
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 p-6 rounded-2xl shadow-lg border border-emerald-100/50 dark:border-emerald-800/30 text-center group hover:scale-105 transition-transform">
+              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300 mb-2 group-hover:text-emerald-800 transition-colors">Lucro Total</p>
+              <p className={`text-3xl font-bold ${
                 totalProfit >= 0 
                 ? 'bg-gradient-to-r from-emerald-600 to-teal-600' 
                 : 'bg-gradient-to-r from-rose-600 to-red-600'
