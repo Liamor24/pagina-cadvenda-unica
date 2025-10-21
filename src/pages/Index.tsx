@@ -90,32 +90,65 @@ const Index = () => {
     }
   };
 
-  const handleSaleUpdated = async (updatedSale: Sale) => {
+  const handleSaleUpdated = async (updatedSale: Partial<Sale> & { id: string }) => {
     try {
+      // Find existing sale in local state
+      const existing = sales.find(s => s.id === updatedSale.id);
+      if (!existing) throw new Error('Venda não encontrada localmente');
+
+      // If the update only contains installmentDates, perform a minimal update to avoid touching products
+      const onlyInstallmentUpdate = (
+        updatedSale.installmentDates !== undefined &&
+        updatedSale.customerName === undefined &&
+        updatedSale.purchaseDate === undefined &&
+        updatedSale.paymentDate === undefined &&
+        updatedSale.paymentMethod === undefined &&
+        updatedSale.installments === undefined &&
+        updatedSale.installmentValues === undefined &&
+        updatedSale.advancePayment === undefined &&
+        updatedSale.products === undefined
+      );
+
+      if (onlyInstallmentUpdate) {
+        const { error } = await supabase
+          .from('sales')
+          .update({ installment_dates: updatedSale.installmentDates ?? null })
+          .eq('id', updatedSale.id);
+
+        if (error) throw error;
+
+        // Update local state
+        setSales(prev => prev.map(s => s.id === updatedSale.id ? { ...s, installmentDates: updatedSale.installmentDates as string[] } : s));
+        return;
+      }
+
+      // Otherwise perform a full update: merge existing with provided fields
+      const merged: Sale = { ...existing, ...(updatedSale as Sale) };
+
       // Update sale row
       const { error: saleError } = await supabase
         .from('sales')
         .update({
-          customer_name: updatedSale.customerName,
-          purchase_date: updatedSale.purchaseDate,
-          payment_date: updatedSale.paymentDate,
-          payment_method: updatedSale.paymentMethod,
-          installments: updatedSale.installments ?? null,
-          installment_values: updatedSale.installmentValues ?? null,
-          installment_dates: updatedSale.installmentDates ?? null,
-          advance_payment: updatedSale.advancePayment ?? null,
+          customer_name: merged.customerName,
+          purchase_date: merged.purchaseDate,
+          payment_date: merged.paymentDate,
+          payment_method: merged.paymentMethod,
+          installments: merged.installments ?? null,
+          installment_values: merged.installmentValues ?? null,
+          installment_dates: merged.installmentDates ?? null,
+          advance_payment: merged.advancePayment ?? null,
         })
-        .eq('id', updatedSale.id);
+        .eq('id', merged.id);
 
       if (saleError) throw saleError;
 
       // Replace products (simple approach: delete existing then insert new)
-      const { error: delError } = await supabase.from('products').delete().eq('sale_id', updatedSale.id);
+      const { error: delError } = await supabase.from('products').delete().eq('sale_id', merged.id);
       if (delError) throw delError;
 
-      if (updatedSale.products && updatedSale.products.length > 0) {
-        const productsToInsert = updatedSale.products.map(p => ({
-          sale_id: updatedSale.id,
+      if (merged.products && merged.products.length > 0) {
+        const productsToInsert = merged.products.map(p => ({
+          sale_id: merged.id,
           product_ref: p.productRef,
           product_name: p.productName,
           purchase_value: p.purchaseValue,
@@ -125,13 +158,13 @@ const Index = () => {
         if (prodError) throw prodError;
       }
 
-      setSales(prev => prev.map(s => s.id === updatedSale.id ? updatedSale : s));
+      setSales(prev => prev.map(s => s.id === merged.id ? merged : s));
       setEditingSale(null);
       toast({ title: "Venda atualizada!", description: "A venda foi atualizada com sucesso." });
     } catch (err) {
       console.error('Error updating sale in Supabase:', err);
-      // Fallback to local update
-      setSales(prev => prev.map(s => s.id === updatedSale.id ? updatedSale : s));
+      // Fallback: merge locally and keep editing state reset
+      setSales(prev => prev.map(s => s.id === updatedSale.id ? { ...s, ...(updatedSale as Partial<Sale>) } as Sale : s));
       setEditingSale(null);
       toast({ title: "Venda atualizada!", description: "A venda foi atualizada localmente (erro no servidor)." });
     }

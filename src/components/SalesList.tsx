@@ -25,10 +25,10 @@ interface SalesListProps {
   sales: Sale[];
   onDeleteSale: (saleId: string) => void;
   onEditSale: (sale: Sale) => void;
-  onUpdateSale?: (sale: Sale) => void;
+  onUpdateSale?: (sale: Partial<Sale> & { id: string }) => void | Promise<void>;
 }
 
-export const SalesList = ({ sales, onDeleteSale, onEditSale }: SalesListProps) => {
+export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale }: SalesListProps) => {
   if (sales.length === 0) {
     return (
       <Card className="w-full shadow-lg rounded-xl border">
@@ -232,11 +232,9 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale }: SalesListProps) =
                                       variant="outline"
                                       size="sm"
                                       onClick={async () => {
-                                        const updatedSale: Sale = { ...sale } as Sale;
-                                        const dates = Array.isArray(updatedSale.installmentDates) ? [...(updatedSale.installmentDates as (string | null)[])] : [];
+                                        const dates = Array.isArray(sale.installmentDates) ? [...(sale.installmentDates as (string | null)[])] : [];
                                         dates[index] = new Date().toISOString().split('T')[0];
-                                        updatedSale.installmentDates = dates as string[];
-                                        if (typeof (onUpdateSale) === 'function') await onUpdateSale(updatedSale);
+                                        if (typeof (onUpdateSale) === 'function') await onUpdateSale({ id: sale.id, installmentDates: dates as string[] });
                                       }}
                                       title="Marcar como Pago"
                                     >
@@ -248,11 +246,9 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale }: SalesListProps) =
                                       variant="ghost"
                                       size="sm"
                                       onClick={async () => {
-                                        const updatedSale: Sale = { ...sale } as Sale;
-                                        const dates = Array.isArray(updatedSale.installmentDates) ? [...(updatedSale.installmentDates as (string | null)[])] : [];
+                                        const dates = Array.isArray(sale.installmentDates) ? [...(sale.installmentDates as (string | null)[])] : [];
                                         dates[index] = null as any;
-                                        updatedSale.installmentDates = dates as unknown as string[];
-                                        if (typeof (onUpdateSale) === 'function') await onUpdateSale(updatedSale);
+                                        if (typeof (onUpdateSale) === 'function') await onUpdateSale({ id: sale.id, installmentDates: dates as string[] });
                                       }}
                                       title="Reverter pagamento"
                                     >
