@@ -46,33 +46,38 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale }: Sal
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {sales
           .sort((a, b) => {
-            // Verificar se está quitado (todas as parcelas pagas)
-            const aQuitado = a.paymentMethod === "installment" && 
-              a.installmentDates && 
-              new Date(a.installmentDates[a.installmentDates.length - 1]) < new Date();
-            const bQuitado = b.paymentMethod === "installment" && 
-              b.installmentDates && 
-              new Date(b.installmentDates[b.installmentDates.length - 1]) < new Date();
-            
+            // Verificar se está quitado (todas as parcelas pagas => nenhuma data null e todas as datas < now)
+            const isFullyPaid = (sale: Sale) => {
+              if (sale.paymentMethod !== "installment") return false;
+              if (!sale.installmentDates || sale.installmentDates.length === 0) return false;
+              const now = new Date();
+              // Considera quitado somente se todas as installmentDates forem não-nulas e anteriores à data atual
+              return sale.installmentDates.every(d => d !== null && new Date(d) < now);
+            };
+
+            const aQuitado = isFullyPaid(a);
+            const bQuitado = isFullyPaid(b);
+
             // Quitados vão para o final
             if (aQuitado !== bQuitado) return aQuitado ? 1 : -1;
-            
-            // Se ambos são parcelados, compara parcelas restantes
+
+            // Se ambos são parcelados, compara parcelas restantes (mais restantes = mais prioridade)
             if (a.paymentMethod === "installment" && b.paymentMethod === "installment") {
               const now = new Date();
-              const aRestantes = (a.installmentDates || []).filter(d => new Date(d) > now).length;
-              const bRestantes = (b.installmentDates || []).filter(d => new Date(d) > now).length;
+              const aRestantes = (a.installmentDates || []).filter(d => !d || new Date(d) > now).length;
+              const bRestantes = (b.installmentDates || []).filter(d => !d || new Date(d) > now).length;
               if (aRestantes !== bRestantes) return bRestantes - aRestantes;
             }
-            
+
             // Por fim, ordena por data mais recente
             return new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime();
           })
           .map((sale) => {
-            // Verificar status de quitado
-            const isQuitado = sale.paymentMethod === "installment" && 
-              sale.installmentDates && 
-              new Date(sale.installmentDates[sale.installmentDates.length - 1]) < new Date();
+            // Verificar status de quitado: somente quando todas as parcelas estão pagas (nenhuma é null e todas < now)
+            const isQuitado = sale.paymentMethod === "installment" &&
+              Array.isArray(sale.installmentDates) &&
+              sale.installmentDates.length > 0 &&
+              sale.installmentDates.every(d => d !== null && new Date(d) < new Date());
 
             const totalPurchaseValue = sale.products.reduce((sum, p) => sum + p.purchaseValue, 0);
             const totalSaleValue = sale.products.reduce((sum, p) => sum + p.saleValue, 0);
@@ -156,9 +161,15 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale }: Sal
                     <Badge variant={sale.paymentMethod === "pix" ? "default" : "outline"}>
                       {sale.paymentMethod === "pix" ? "PIX" : `${sale.installments}x`}
                     </Badge>
-                    {sale.paymentMethod === "installment" && (
+                        {sale.paymentMethod === "installment" && (
                       <span className="text-sm text-muted-foreground">
-                        {sale.installmentDates?.findIndex(d => new Date(d) > new Date()) ?? 0}/{sale.installments} parcelas
+                        {/* parcelas abertas restantes */}
+                        {(() => {
+                          if (!Array.isArray(sale.installmentDates)) return `0/${sale.installments} parcelas`;
+                          const now = new Date();
+                          const remaining = sale.installmentDates.filter(d => !d || new Date(d) > now).length;
+                          return `${remaining}/${sale.installments} parcelas`;
+                        })()}
                       </span>
                     )}
                   </div>
@@ -202,7 +213,7 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale }: Sal
                         <div className="border rounded-lg overflow-hidden">
                           {sale.installmentValues.map((value, index) => {
                             const installmentDate = sale.installmentDates?.[index];
-                            const isPaid = installmentDate && new Date(installmentDate) < new Date();
+                            const isPaid = installmentDate !== null && installmentDate !== undefined && new Date(installmentDate) < new Date();
                             
                             return (
                               <div
@@ -232,7 +243,7 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale }: Sal
                                       variant="outline"
                                       size="sm"
                                       onClick={async () => {
-                                        const dates = Array.isArray(sale.installmentDates) ? [...(sale.installmentDates as (string | null)[])] : [];
+                                        const dates = Array.isArray(sale.installmentDates) ? [...(sale.installmentDates as (string | null)[])] : Array(sale.installmentValues.length).fill(null);
                                         dates[index] = new Date().toISOString().split('T')[0];
                                         if (typeof (onUpdateSale) === 'function') await onUpdateSale({ id: sale.id, installmentDates: dates as string[] });
                                       }}
@@ -246,7 +257,7 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale }: Sal
                                       variant="ghost"
                                       size="sm"
                                       onClick={async () => {
-                                        const dates = Array.isArray(sale.installmentDates) ? [...(sale.installmentDates as (string | null)[])] : [];
+                                        const dates = Array.isArray(sale.installmentDates) ? [...(sale.installmentDates as (string | null)[])] : Array(sale.installmentValues.length).fill(null);
                                         dates[index] = null as any;
                                         if (typeof (onUpdateSale) === 'function') await onUpdateSale({ id: sale.id, installmentDates: dates as string[] });
                                       }}

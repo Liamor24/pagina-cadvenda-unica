@@ -247,8 +247,37 @@ const Index = () => {
   }, 0);
   
   const totalSales = filteredSales.reduce((sum, sale) => {
-    const saleTotal = sale.products.reduce((p, product) => p + product.saleValue, 0);
-    return sum + saleTotal;
+    // If showing all months, include the full sale total
+    if (selectedMonth === 'total') {
+      const saleTotal = sale.products.reduce((p, product) => p + product.saleValue, 0);
+      return sum + saleTotal;
+    }
+
+    // For a specific month, sum only the installments (or pix payment) that belong to that month
+    if (sale.paymentMethod === 'pix') {
+      const paymentDate = new Date(sale.paymentDate);
+      const saleMonth = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}`;
+      if (saleMonth === selectedMonth) {
+        const saleTotal = sale.products.reduce((p, product) => p + product.saleValue, 0);
+        return sum + saleTotal;
+      }
+      return sum;
+    }
+
+    if (sale.paymentMethod === 'installment' && sale.installmentValues && sale.installmentDates) {
+      // Sum each installment whose date's month equals selectedMonth
+      const items = sale.installmentValues.reduce((acc, val, idx) => {
+        const dateStr = sale.installmentDates?.[idx];
+        if (!dateStr) return acc; // skip installments without a scheduled date
+        const d = new Date(dateStr);
+        const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (m === selectedMonth) return acc + val;
+        return acc;
+      }, 0);
+      return sum + items;
+    }
+
+    return sum;
   }, 0);
 
   // Calcula total de despesas para o mês selecionado
