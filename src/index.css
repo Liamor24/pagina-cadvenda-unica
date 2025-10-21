@@ -124,4 +124,28 @@ All colors MUST be HSL.
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Tipografia global */
+  html {
+    font-size: 16px;
+  }
+
+  h1 {
+    font-size: 2.25rem; /* 36px */
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    font-size: 1.5rem; /* 24px */
+    line-height: 1.15;
+  }
+
+  p, li, span {
+    line-height: 1.6;
+  }
+
+  small, .text-xs {
+    font-size: 0.78rem; /* ~12.5px */
+  }
 }

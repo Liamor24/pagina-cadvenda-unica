@@ -152,7 +152,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       {/* Header */}
-      <header className="bg-card/80 backdrop-blur-sm border-b border-border shadow-[var(--shadow-card)] sticky top-0 z-50">
+  <header className="bg-card/70 backdrop-blur-md border-b border-border/40 shadow-[var(--shadow-card)] sticky top-0 z-50 backdrop-saturate-110">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">

@@ -134,7 +134,7 @@ const APagar = () => {
   const ultimaDespesa = expenses.length > 0 ? [...expenses].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())[0] : null;
   return <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-card/80 backdrop-blur-sm border-b border-border shadow-md sticky top-0 z-50">
+  <header className="bg-card/70 backdrop-blur-md border-b border-border/40 shadow-md sticky top-0 z-50 backdrop-saturate-110">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
