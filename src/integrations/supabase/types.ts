@@ -102,6 +102,7 @@ export type Database = {
           advance_payment: number | null
           created_at: string
           customer_name: string
+          discount: number | null
           id: string
           installment_dates: Json | null
           installment_values: Json | null
@@ -115,6 +116,7 @@ export type Database = {
           advance_payment?: number | null
           created_at?: string
           customer_name: string
+          discount?: number | null
           id?: string
           installment_dates?: Json | null
           installment_values?: Json | null
@@ -128,6 +130,7 @@ export type Database = {
           advance_payment?: number | null
           created_at?: string
           customer_name?: string
+          discount?: number | null
           id?: string
           installment_dates?: Json | null
           installment_values?: Json | null

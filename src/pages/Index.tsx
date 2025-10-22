@@ -18,6 +18,7 @@ const Index = () => {
   useEffect(() => {
     const fetchSales = async () => {
       try {
+        console.log('Fetching sales from Supabase...');
         const { data: salesData, error: salesError } = await supabase
           .from('sales')
           .select(`
@@ -26,7 +27,12 @@ const Index = () => {
           `)
           .order('created_at', { ascending: false });
 
-        if (salesError) throw salesError;
+        if (salesError) {
+          console.error('Error fetching sales:', salesError);
+          throw salesError;
+        }
+
+        console.log('Raw sales data from Supabase:', salesData);
 
         if (salesData) {
           // Transform the data to match the Sale type
@@ -49,7 +55,11 @@ const Index = () => {
             }))
           }));
 
+          console.log('Transformed sales data:', transformedSales);
           setSales(transformedSales);
+        } else {
+          console.log('No sales data found');
+          setSales([]);
         }
       } catch (error) {
         console.error('Error fetching sales:', error);
@@ -81,6 +91,8 @@ const Index = () => {
   const handleSaleAdded = async (sale: Sale) => {
     // Persist sale to Supabase, then update local state with returned id
     try {
+      console.log('Saving sale to Supabase:', sale);
+      
       const { data: saleInsert, error: saleError } = await supabase
         .from('sales')
         .insert({
@@ -97,9 +109,18 @@ const Index = () => {
         .select('id')
         .single();
 
-      if (saleError || !saleInsert) throw saleError || new Error('Failed to insert sale');
+      if (saleError) {
+        console.error('Error inserting sale:', saleError);
+        throw saleError;
+      }
+      
+      if (!saleInsert) {
+        console.error('No data returned from sale insert');
+        throw new Error('Failed to insert sale - no data returned');
+      }
 
       const saleId = saleInsert.id;
+      console.log('Sale inserted with ID:', saleId);
 
       // Insert products linked to sale
       if (sale.products && sale.products.length > 0) {
@@ -111,16 +132,31 @@ const Index = () => {
           sale_value: p.saleValue,
         }));
 
+        console.log('Inserting products:', productsToInsert);
         const { error: prodError } = await supabase.from('products').insert(productsToInsert);
-        if (prodError) throw prodError;
+        if (prodError) {
+          console.error('Error inserting products:', prodError);
+          throw prodError;
+        }
+        console.log('Products inserted successfully');
       }
 
       // Update local state using the sale id from database
       const persistedSale: Sale = { ...sale, id: saleId };
       setSales(prev => [persistedSale, ...prev]);
       setEditingSale(null);
+      
+      toast({
+        title: "Venda salva!",
+        description: "A venda foi salva com sucesso no banco de dados.",
+      });
     } catch (err) {
       console.error('Error saving sale to Supabase:', err);
+      toast({
+        title: "Erro ao salvar venda",
+        description: "Houve um erro ao salvar a venda. Verifique o console para mais detalhes.",
+        variant: "destructive"
+      });
       // Fallback: keep locally
       setSales(prev => [sale, ...prev]);
       setEditingSale(null);
@@ -129,9 +165,14 @@ const Index = () => {
 
   const handleSaleUpdated = async (updatedSale: Partial<Sale> & { id: string }) => {
     try {
+      console.log('Updating sale:', updatedSale);
+      
       // Find existing sale in local state
       const existing = sales.find(s => s.id === updatedSale.id);
-      if (!existing) throw new Error('Venda não encontrada localmente');
+      if (!existing) {
+        console.error('Sale not found locally:', updatedSale.id);
+        throw new Error('Venda não encontrada localmente');
+      }
 
       // If the update only contains installmentDates, perform a minimal update to avoid touching products
       const onlyInstallmentUpdate = (
@@ -143,24 +184,31 @@ const Index = () => {
         updatedSale.installments === undefined &&
         updatedSale.installmentValues === undefined &&
         updatedSale.advancePayment === undefined &&
+        updatedSale.discount === undefined &&
         updatedSale.products === undefined
       );
 
       if (onlyInstallmentUpdate) {
+        console.log('Performing installment-only update');
         const { error } = await supabase
           .from('sales')
           .update({ installment_dates: updatedSale.installmentDates ?? null })
           .eq('id', updatedSale.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating installment dates:', error);
+          throw error;
+        }
 
         // Update local state
         setSales(prev => prev.map(s => s.id === updatedSale.id ? { ...s, installmentDates: updatedSale.installmentDates as string[] } : s));
+        console.log('Installment dates updated successfully');
         return;
       }
 
       // Otherwise perform a full update: merge existing with provided fields
       const merged: Sale = { ...existing, ...(updatedSale as Sale) };
+      console.log('Merged sale data:', merged);
 
       // Update sale row
       const { error: saleError } = await supabase
@@ -178,11 +226,18 @@ const Index = () => {
         })
         .eq('id', merged.id);
 
-      if (saleError) throw saleError;
+      if (saleError) {
+        console.error('Error updating sale:', saleError);
+        throw saleError;
+      }
 
       // Replace products (simple approach: delete existing then insert new)
+      console.log('Deleting existing products for sale:', merged.id);
       const { error: delError } = await supabase.from('products').delete().eq('sale_id', merged.id);
-      if (delError) throw delError;
+      if (delError) {
+        console.error('Error deleting products:', delError);
+        throw delError;
+      }
 
       if (merged.products && merged.products.length > 0) {
         const productsToInsert = merged.products.map(p => ({
@@ -192,19 +247,28 @@ const Index = () => {
           purchase_value: p.purchaseValue,
           sale_value: p.saleValue,
         }));
+        console.log('Inserting new products:', productsToInsert);
         const { error: prodError } = await supabase.from('products').insert(productsToInsert);
-        if (prodError) throw prodError;
+        if (prodError) {
+          console.error('Error inserting products:', prodError);
+          throw prodError;
+        }
       }
 
       setSales(prev => prev.map(s => s.id === merged.id ? merged : s));
       setEditingSale(null);
+      console.log('Sale updated successfully');
       toast({ title: "Venda atualizada!", description: "A venda foi atualizada com sucesso." });
     } catch (err) {
       console.error('Error updating sale in Supabase:', err);
       // Fallback: merge locally and keep editing state reset
       setSales(prev => prev.map(s => s.id === updatedSale.id ? { ...s, ...(updatedSale as Partial<Sale>) } as Sale : s));
       setEditingSale(null);
-      toast({ title: "Venda atualizada!", description: "A venda foi atualizada localmente (erro no servidor)." });
+      toast({ 
+        title: "Erro ao atualizar venda", 
+        description: "Houve um erro ao atualizar a venda. Verifique o console para mais detalhes.",
+        variant: "destructive"
+      });
     }
   };
 
