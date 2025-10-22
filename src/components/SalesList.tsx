@@ -283,7 +283,7 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale, selec
                                       size="sm"
                                       onClick={async () => {
                                         const dates = Array.isArray(sale.installmentDates) ? [...(sale.installmentDates as (string | null)[])] : Array(sale.installmentValues.length).fill(null);
-                                        dates[index] = null as any;
+                                        dates[index] = null;
                                         if (typeof (onUpdateSale) === 'function') await onUpdateSale({ id: sale.id, installmentDates: dates as string[] });
                                       }}
                                       title="Reverter pagamento"
