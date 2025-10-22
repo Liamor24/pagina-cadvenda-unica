@@ -1,13 +1,13 @@
 import { useState, useCallback } from 'react';
 
 export const useDateFilter = (initialMonth?: string) => {
-  const [selectedMonth, setSelectedMonth] = useState&lt;string | null&gt;(
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(
     initialMonth || new Date().toISOString().slice(0, 7)
   );
 
   const changeMonth = useCallback((month: string | null) => {
     setSelectedMonth(month);
-  }, []);
+  }, [setSelectedMonth]);
 
   const isInSelectedMonth = useCallback(
     (date: string) => {
