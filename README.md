@@ -1,73 +1,137 @@
-# Welcome to your Lovable project
+# 🛍️ Sistema de Controle de Vendas - Ellas Concept
 
-## Project info
+Sistema completo de gestão de vendas desenvolvido com React, TypeScript, Vite e Supabase.
 
-**URL**: https://lovable.dev/projects/5dc634a8-f1e9-4292-9e95-b3c7221a0a85
+## ✨ Funcionalidades
 
-## How can I edit this code?
+- **📊 Controle de Vendas**: Cadastro, edição e exclusão de vendas
+- **📦 Gestão de Produtos**: Produtos vinculados às vendas com controle de lucro
+- **💰 Formas de Pagamento**: PIX à vista e parcelamento
+- **📅 Controle de Parcelas**: Gestão de parcelas com datas e valores
+- **📈 Relatórios**: Cálculos automáticos de lucro e totais
+- **🔍 Filtros**: Filtro por mês e busca de vendas
+- **💾 Persistência**: Dados salvos no Supabase (banco de dados em nuvem)
 
-There are several ways of editing your application.
+## 🚀 Tecnologias Utilizadas
 
-**Use Lovable**
+- **Frontend**: React 18 + TypeScript
+- **Build Tool**: Vite 7.1.12
+- **UI Components**: shadcn/ui + Tailwind CSS
+- **Backend**: Supabase (PostgreSQL)
+- **Formulários**: React Hook Form + Zod
+- **Ícones**: Lucide React
+- **Roteamento**: React Router DOM
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/5dc634a8-f1e9-4292-9e95-b3c7221a0a85) and start prompting.
+## 🛠️ Instalação e Execução
 
-Changes made via Lovable will be committed automatically to this repo.
+### Pré-requisitos
+- Node.js (versão 18 ou superior)
+- npm ou yarn
 
-**Use your preferred IDE**
+### Passos para executar
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. **Clone o repositório**
+```bash
+git clone https://github.com/mariliasantoz/pagina-cadvenda-unica.git
+cd pagina-cadvenda-unica
+```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+2. **Instale as dependências**
+```bash
+npm install
+```
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+3. **Execute a aplicação**
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+4. **Acesse a aplicação**
+```
+http://localhost:8080
+```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 📋 Scripts Disponíveis
 
-**Use GitHub Codespaces**
+- `npm run dev` - Inicia o servidor de desenvolvimento
+- `npm run build` - Gera build de produção
+- `npm run preview` - Visualiza o build de produção
+- `npm run lint` - Executa o linter
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🗄️ Estrutura do Banco de Dados
 
-## What technologies are used for this project?
+### Tabelas Principais
 
-This project is built with:
+- **sales**: Vendas com informações do cliente, datas e forma de pagamento
+- **products**: Produtos vinculados às vendas
+- **expenses**: Despesas (página "A Pagar")
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Relacionamentos
 
-## How can I deploy this project?
+- Uma venda pode ter múltiplos produtos
+- Produtos são vinculados às vendas via `sale_id`
+- Exclusão em cascata: ao excluir uma venda, seus produtos são removidos
 
-Simply open [Lovable](https://lovable.dev/projects/5dc634a8-f1e9-4292-9e95-b3c7221a0a85) and click on Share -> Publish.
+## 🔧 Configuração do Supabase
 
-## Can I connect a custom domain to my Lovable project?
+O projeto está configurado para usar o Supabase como backend. As configurações estão em:
+- `src/integrations/supabase/client.ts`
+- `src/integrations/supabase/types.ts`
 
-Yes, you can!
+## 📱 Páginas do Sistema
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+1. **Controle de Vendas** (`/`) - Página principal com cadastro e listagem de vendas
+2. **A Pagar** (`/a-pagar`) - Controle de despesas e contas a pagar
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## 🎯 Funcionalidades Implementadas
+
+### ✅ Vendas
+- Cadastro completo de vendas
+- Edição de vendas existentes
+- Exclusão de vendas
+- Filtro por mês
+- Busca por cliente
+- Cálculo automático de lucro
+
+### ✅ Produtos
+- Múltiplos produtos por venda
+- Controle de referência
+- Valores de compra e venda
+- Cálculo individual de lucro
+
+### ✅ Pagamentos
+- PIX à vista
+- Parcelamento com controle de datas
+- Entrada/adiantamento
+- Desconto aplicado
+
+### ✅ Persistência
+- Dados salvos no Supabase
+- Sincronização automática
+- Backup em nuvem
+- Não perde dados ao atualizar a página
+
+## 🚀 Deploy
+
+O projeto pode ser deployado em qualquer plataforma que suporte React:
+
+- **Vercel** (recomendado)
+- **Netlify**
+- **GitHub Pages**
+- **Railway**
+
+## 📄 Licença
+
+Este projeto é privado e pertence à Ellas Concept.
+
+## 👥 Desenvolvimento
+
+Sistema desenvolvido com foco em:
+- **Performance**: Carregamento rápido e responsivo
+- **Usabilidade**: Interface intuitiva e fácil de usar
+- **Confiabilidade**: Dados sempre seguros e sincronizados
+- **Escalabilidade**: Preparado para crescimento
+
+---
+
+**© 2025 Ellas Concept - Sistema de Controle de Vendas**
