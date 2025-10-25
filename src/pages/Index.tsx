@@ -13,6 +13,7 @@ import { Link } from "react-router-dom";
 
 const Index = () => {
   const [sales, setSales] = useState<Sale[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
 
   // Fetch sales from Supabase when component mounts
   useEffect(() => {
@@ -74,18 +75,48 @@ const Index = () => {
 
     fetchSales();
   }, []);
+
+  // Fetch expenses from Supabase when component mounts
+  useEffect(() => {
+    const fetchExpenses = async () => {
+      try {
+        const { data: expensesData, error: expensesError } = await supabase
+          .from('expenses')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (expensesError) {
+          console.error('Error fetching expenses:', expensesError);
+          return;
+        }
+
+        if (expensesData && expensesData.length > 0) {
+          const transformedExpenses: Expense[] = expensesData.map(expense => ({
+            id: expense.id,
+            descricao: expense.descricao,
+            categoria: expense.categoria,
+            data: expense.data,
+            valorTotal: expense.valor_total,
+            formaPagamento: expense.forma_pagamento,
+            parcelas: expense.parcelas,
+            parcelaAtual: expense.parcela_atual,
+            mesReferencia: expense.mes_referencia,
+            observacao: expense.observacao
+          }));
+
+          setExpenses(transformedExpenses);
+        }
+      } catch (error) {
+        console.error('Error fetching expenses:', error);
+      }
+    };
+
+    fetchExpenses();
+  }, []);
+
   const [selectedMonth, setSelectedMonth] = useState<string>("total");
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [expenses, setExpenses] = useState<Expense[]>(() => {
-    try {
-      const raw = localStorage.getItem('expenses');
-      return raw ? JSON.parse(raw) as Expense[] : [];
-    } catch (e) {
-      console.error('Erro ao ler despesas do localStorage', e);
-      return [];
-    }
-  });
 
   // Removed localStorage persistence since we're using Supabase now
 
@@ -106,6 +137,7 @@ const Index = () => {
           installment_values: sale.installmentValues ?? null,
           installment_dates: sale.installmentDates ?? null,
           advance_payment: sale.advancePayment ?? null,
+          discount: sale.discount ?? null,
         })
         .select('id')
         .single();
@@ -222,6 +254,7 @@ const Index = () => {
           installment_values: merged.installmentValues ?? null,
           installment_dates: merged.installmentDates ?? null,
           advance_payment: merged.advancePayment ?? null,
+          discount: merged.discount ?? null,
         })
         .eq('id', merged.id);
 

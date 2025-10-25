@@ -1,65 +1,65 @@
-# 🔐 INSTRUÇÕES PARA ENVIAR CÓDIGO PARA O GITHUB
+# Instruções para Acesso ao Repositório GitHub
 
-## ❌ Problema Atual
-Você está autenticado como `mariliasantoz` no Windows, mas precisa acessar o repositório do `Liamor24`.
+## ✅ Configuração Atual
 
-## ✅ SOLUÇÃO AUTOMÁTICA
+- **Usuário Git**: Liamor24
+- **Email**: lmflix15@gmail.com
+- **Repositório**: https://github.com/Liamor24/pagina-cadvenda-unica.git
+- **Status**: 5 commits à frente do origin/main
 
-### **Passo 1: Criar Personal Access Token**
+## 🔑 Para Fazer Push (Enviar Alterações)
 
-1. **Acesse:** https://github.com/settings/tokens
-2. **Clique em:** "Generate new token" → "Generate new token (classic)"
-3. **Preencha:**
-   - **Note:** `pagina-cadvenda-unica`
-   - **Expiration:** `No expiration` (ou escolha uma data)
-   - **Scopes:** Marque `repo` (acesso completo aos repositórios)
-4. **Clique em:** "Generate token"
-5. **COPIE O TOKEN** (você só verá uma vez!)
+### 1. Criar Personal Access Token (PAT)
 
-### **Passo 2: Executar Script Automático**
+1. Acesse: https://github.com/settings/tokens
+2. Clique em **"Generate new token"** > **"Generate new token (classic)"**
+3. **Nome**: `pagina-cadvenda-unica`
+4. **Expiration**: Escolha um prazo (recomendo 90 dias)
+5. **Scopes**: Selecione **"repo"** (acesso completo aos repositórios)
+6. Clique em **"Generate token"**
+7. **⚠️ IMPORTANTE**: Copie o token imediatamente (você só verá uma vez!)
 
-Execute este comando no terminal:
+### 2. Fazer Push
 
-```powershell
-powershell -ExecutionPolicy Bypass -File fix-git-auth.ps1
+Quando executar `git push origin main`, o Git pedirá credenciais:
+
+- **Username**: `Liamor24`
+- **Password**: Cole o Personal Access Token aqui (não sua senha do GitHub)
+
+### 3. Comandos Úteis
+
+```bash
+# Ver status atual
+git status
+
+# Fazer push das alterações
+git push origin main
+
+# Ver commits pendentes
+git log --oneline origin/main..HEAD
+
+# Sincronizar com o repositório
+git fetch origin
+git pull origin main
 ```
 
-### **Passo 3: Quando Pedir Credenciais**
+## 🚀 Próximos Passos
 
-- **Username:** `Liamor24`
-- **Password:** Cole o token que você copiou
+1. Crie o Personal Access Token seguindo as instruções acima
+2. Execute `git push origin main` para enviar os 5 commits pendentes
+3. A partir daí, você poderá fazer push normalmente
 
-## 🚀 ALTERNATIVA: GitHub Desktop
+## 📝 Notas Importantes
 
-Se preferir uma interface gráfica:
+- O repositório está configurado corretamente
+- Você tem 5 commits locais que precisam ser enviados
+- Após configurar o PAT, todas as operações de push funcionarão normalmente
+- O token pode ser reutilizado para futuras operações
 
-1. **Baixe:** https://desktop.github.com/
-2. **Instale e abra**
-3. **Faça login** com a conta `Liamor24`
-4. **Clone o repositório:** `https://github.com/Liamor24/pagina-cadvenda-unica.git`
-5. **Copie os arquivos** da pasta atual para a pasta clonada
-6. **Commit e Push** pelo GitHub Desktop
+## 🔧 Troubleshooting
 
-## 📋 RESUMO DAS CORREÇÕES FEITAS
+Se ainda houver problemas:
 
-✅ **Problema de persistência RESOLVIDO:**
-- Vendas agora são salvas no banco Supabase
-- Dados não desaparecem mais ao atualizar a página
-- Todas as operações (criar, editar, excluir) são persistidas
-
-✅ **Código otimizado:**
-- Tratamento de erros melhorado
-- Queries corrigidas
-- Estrutura do banco verificada
-
-✅ **Documentação atualizada:**
-- README completo
-- Scripts de autenticação automática
-- Instruções detalhadas
-
-## 🎯 RESULTADO FINAL
-
-Após seguir as instruções acima, todas as correções serão enviadas para:
-**https://github.com/Liamor24/pagina-cadvenda-unica**
-
-O sistema estará funcionando perfeitamente com persistência completa no banco de dados!
+1. Verifique se o token tem permissão de "repo"
+2. Confirme que está usando o username correto: `Liamor24`
+3. Teste o acesso com: `git fetch origin`
