@@ -34,7 +34,7 @@ const Index = () => {
 
         console.log('Raw sales data from Supabase:', salesData);
 
-        if (salesData) {
+        if (salesData && salesData.length > 0) {
           // Transform the data to match the Sale type
           const transformedSales: Sale[] = salesData.map(sale => ({
             id: sale.id,
@@ -47,12 +47,13 @@ const Index = () => {
             installmentDates: sale.installment_dates,
             advancePayment: sale.advance_payment,
             discount: sale.discount,
-            products: sale.products.map(product => ({
+            products: sale.products ? sale.products.map(product => ({
+              id: product.id,
               productRef: product.product_ref,
               productName: product.product_name,
               purchaseValue: product.purchase_value,
               saleValue: product.sale_value
-            }))
+            })) : []
           }));
 
           console.log('Transformed sales data:', transformedSales);
@@ -93,6 +94,7 @@ const Index = () => {
     try {
       console.log('Saving sale to Supabase:', sale);
       
+      // First, insert the sale
       const { data: saleInsert, error: saleError } = await supabase
         .from('sales')
         .insert({
@@ -104,7 +106,6 @@ const Index = () => {
           installment_values: sale.installmentValues ?? null,
           installment_dates: sale.installmentDates ?? null,
           advance_payment: sale.advancePayment ?? null,
-          discount: sale.discount ?? null,
         })
         .select('id')
         .single();
@@ -157,8 +158,7 @@ const Index = () => {
         description: "Houve um erro ao salvar a venda. Verifique o console para mais detalhes.",
         variant: "destructive"
       });
-      // Fallback: keep locally
-      setSales(prev => [sale, ...prev]);
+      // Don't add to local state if database save failed
       setEditingSale(null);
     }
   };
@@ -222,7 +222,6 @@ const Index = () => {
           installment_values: merged.installmentValues ?? null,
           installment_dates: merged.installmentDates ?? null,
           advance_payment: merged.advancePayment ?? null,
-          discount: merged.discount ?? null,
         })
         .eq('id', merged.id);
 
@@ -261,14 +260,12 @@ const Index = () => {
       toast({ title: "Venda atualizada!", description: "A venda foi atualizada com sucesso." });
     } catch (err) {
       console.error('Error updating sale in Supabase:', err);
-      // Fallback: merge locally and keep editing state reset
-      setSales(prev => prev.map(s => s.id === updatedSale.id ? { ...s, ...(updatedSale as Partial<Sale>) } as Sale : s));
-      setEditingSale(null);
       toast({ 
         title: "Erro ao atualizar venda", 
         description: "Houve um erro ao atualizar a venda. Verifique o console para mais detalhes.",
         variant: "destructive"
       });
+      setEditingSale(null);
     }
   };
 
@@ -280,15 +277,23 @@ const Index = () => {
 
   const handleDeleteSale = async (saleId: string) => {
     try {
+      // Delete from database first
       const { error } = await supabase.from('sales').delete().eq('id', saleId);
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting sale from Supabase:', error);
+        throw error;
+      }
+      
+      // Only update local state if database deletion was successful
       setSales(prev => prev.filter(s => s.id !== saleId));
       toast({ title: "Venda removida!", description: "A venda foi excluída com sucesso." });
     } catch (err) {
       console.error('Error deleting sale from Supabase:', err);
-      // Fallback: remove locally
-      setSales(prev => prev.filter(s => s.id !== saleId));
-      toast({ title: "Venda removida!", description: "A venda foi excluída localmente (erro no servidor)." });
+      toast({ 
+        title: "Erro ao excluir venda", 
+        description: "Houve um erro ao excluir a venda. Verifique o console para mais detalhes.",
+        variant: "destructive"
+      });
     }
   };
 
