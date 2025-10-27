@@ -218,47 +218,46 @@ const Index = () => {
   // Removed localStorage persistence since we're usando Supabase agora
 
   const handleSaleAdded = async (sale: Sale) => {
-    // Persist sale to Supabase, then update local state with returned id
+    console.log('🔥 handleSaleAdded CHAMADO com dados:', sale);
+    console.log('🔥 Estado atual de sales:', sales.length, 'vendas');
+    
+    // Optimistic UI: adiciona venda imediatamente com ID temporário
+    const tempId = `tmp-${Date.now()}`;
+    const tempSale: Sale = { ...sale, id: tempId };
+    console.log('🔥 Adicionando venda temporária no estado:', tempSale);
+    setSales(prev => [tempSale, ...prev]);
+    setEditingSale(null);
+
     try {
-      console.log('Saving sale to Supabase:', sale);
+      console.log('🔥 Tentando inserir venda no Supabase...');
       
-      // First, insert the sale
-      const { data: saleInsert, error: saleError } = await supabase
-        .from('sales')
-        .insert({
-          customer_name: sale.customerName,
-          purchase_date: sale.purchaseDate,
-          payment_date: sale.paymentDate,
-          payment_method: sale.paymentMethod,
-          installments: sale.installments ?? null,
-          installment_values: sale.installmentValues ?? null,
-          installment_dates: sale.installmentDates ?? null,
-          advance_payment: sale.advancePayment ?? null,
-          discount: sale.discount ?? null,
-        })
-        .select('id')
-        .single();
+      const { data: saleInsert, error: saleError } = await supabase.from('sales').insert({
+        customer_name: sale.customerName,
+        purchase_date: sale.purchaseDate,
+        payment_date: sale.paymentDate,
+        payment_method: sale.paymentMethod,
+        installments: sale.installments,
+        installment_values: sale.installmentValues,
+        installment_dates: sale.installmentDates,
+        advance_payment: sale.advancePayment,
+        discount: sale.discount,
+      }).select().single();
 
       if (saleError) {
-        console.error('Error inserting sale:', saleError);
+        console.error('❌ Erro ao inserir venda:', saleError);
+        // Remove venda temporária se falhar
+        setSales(prev => prev.filter(s => s.id !== tempId));
         throw saleError;
-      }
-      
-      if (!saleInsert) {
-        console.error('No data returned from sale insert');
-        throw new Error('Failed to insert sale - no data returned');
       }
 
       const saleId = saleInsert.id;
-      console.log('Sale inserted with ID:', saleId);
+      console.log('✅ Sale inserted with ID:', saleId);
 
-
-
-      // Optimistically update local state before inserting products
+      // Substitui venda temporária pela persistida
       const persistedSale: Sale = { ...sale, id: saleId };
-      setSales(prev => [persistedSale, ...prev]);
-      setEditingSale(null);
-
+      console.log('🔥 Substituindo venda temporária pela persistida:', persistedSale);
+      setSales(prev => prev.map(s => s.id === tempId ? persistedSale : s));
+      
       // Insert products linked to sale
       if (sale.products && sale.products.length > 0) {
         const productsToInsert = sale.products.map(p => ({
@@ -269,34 +268,33 @@ const Index = () => {
           sale_value: p.saleValue,
         }));
 
-        console.log('Inserting products:', productsToInsert);
+        console.log('🔥 Inserting products:', productsToInsert);
         const { error: prodError } = await supabase.from('products').insert(productsToInsert);
         if (prodError) {
-          console.error('Error inserting products:', prodError);
+          console.error('❌ Error inserting products:', prodError);
           toast({
             title: "Produtos não salvos",
             description: "A venda foi criada, mas houve erro ao salvar os produtos.",
             variant: "destructive",
           });
         } else {
-          console.log('Products inserted successfully');
+          console.log('✅ Products inserted successfully');
         }
       }
 
       // Success feedback
+      console.log('🔥 Processo completo, mostrando toast de sucesso');
       toast({
         title: "Venda salva!",
         description: "A venda foi salva com sucesso no banco de dados.",
       });
-    } catch (err) {
-      console.error('Error saving sale to Supabase:', err);
+    } catch (error) {
+      console.error('❌ Erro geral em handleSaleAdded:', error);
       toast({
         title: "Erro ao salvar venda",
-        description: "Houve um erro ao salvar a venda. Verifique o console para mais detalhes.",
-        variant: "destructive"
+        description: "Houve um erro ao salvar a venda.",
+        variant: "destructive",
       });
-      // Don't add to local state if database save failed
-      setEditingSale(null);
     }
   };
 
@@ -457,7 +455,19 @@ const Index = () => {
     });
   };
 
-  const filteredSales = filterSalesByMonth(sales);
+  console.log("🔍 DEBUG FILTROS:");
+  console.log("- sales.length:", sales.length);
+  console.log("- selectedMonth:", selectedMonth);
+  console.log("- searchTerm:", searchTerm);
+  
+  const monthFiltered = filterSalesByMonth(sales);
+  console.log("- após filterSalesByMonth:", monthFiltered.length);
+  
+  const filteredSales = monthFiltered.filter(sale => 
+    sale.customerName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  console.log("- após filtro de busca:", filteredSales.length);
+  console.log("- filteredSales:", filteredSales);
 
   // Gerar lista de meses disponíveis das vendas (ordem cronológica)
   const availableMonths = Array.from(new Set(
