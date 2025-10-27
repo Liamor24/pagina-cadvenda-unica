@@ -10,10 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Expense } from "@/pages/APagar";
 import { Link } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 
 const Index = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  // Status de conexão com o banco
+  const [dbStatus, setDbStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
 
   // Fetch sales from Supabase when component mounts
   useEffect(() => {
@@ -59,9 +62,11 @@ const Index = () => {
 
           console.log('Transformed sales data:', transformedSales);
           setSales(transformedSales);
+          setDbStatus('connected');
         } else {
           console.log('No sales data found');
           setSales([]);
+          setDbStatus('connected');
         }
       } catch (error) {
         console.error('Error fetching sales:', error);
@@ -70,6 +75,7 @@ const Index = () => {
           description: "Houve um erro ao carregar as vendas do banco de dados.",
           variant: "destructive"
         });
+        setDbStatus('error');
       }
     };
 
@@ -114,11 +120,102 @@ const Index = () => {
     fetchExpenses();
   }, []);
 
+  // Realtime updates de vendas e produtos
+  useEffect(() => {
+    const channel = supabase
+      .channel('realtime-sales')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, async (payload: any) => {
+        try {
+          const saleId = payload.new?.id || payload.old?.id;
+          if (!saleId) return;
+          const { data, error } = await supabase
+            .from('sales')
+            .select(`*, products (*)`)
+            .eq('id', saleId)
+            .single();
+          if (error) { console.error('Realtime fetch error:', error); setDbStatus('error'); return; }
+          const transformedSale: Sale = {
+            id: data.id,
+            customerName: data.customer_name,
+            purchaseDate: data.purchase_date,
+            paymentDate: data.payment_date,
+            paymentMethod: data.payment_method,
+            installments: data.installments,
+            installmentValues: data.installment_values,
+            installmentDates: data.installment_dates,
+            advancePayment: data.advance_payment,
+            discount: data.discount,
+            products: data.products ? data.products.map((product: any) => ({
+              id: product.id,
+              productRef: product.product_ref,
+              productName: product.product_name,
+              purchaseValue: product.purchase_value,
+              saleValue: product.sale_value
+            })) : []
+          };
+          setSales(prev => {
+            const exists = prev.find(s => s.id === transformedSale.id);
+            if (exists) {
+              return prev.map(s => s.id === transformedSale.id ? transformedSale : s);
+            }
+            return [transformedSale, ...prev];
+          });
+          setDbStatus('connected');
+          toast({ title: "Dados sincronizados", description: "Atualização em tempo real aplicada." });
+        } catch (err) {
+          console.error('Erro no realtime sales:', err);
+          setDbStatus('error');
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, async (payload: any) => {
+        try {
+          const saleId = payload.new?.sale_id || payload.old?.sale_id;
+          if (!saleId) return;
+          const { data, error } = await supabase
+            .from('sales')
+            .select(`*, products (*)`)
+            .eq('id', saleId)
+            .single();
+          if (error) { console.error('Realtime fetch error (products):', error); setDbStatus('error'); return; }
+          const transformedSale: Sale = {
+            id: data.id,
+            customerName: data.customer_name,
+            purchaseDate: data.purchase_date,
+            paymentDate: data.payment_date,
+            paymentMethod: data.payment_method,
+            installments: data.installments,
+            installmentValues: data.installment_values,
+            installmentDates: data.installment_dates,
+            advancePayment: data.advance_payment,
+            discount: data.discount,
+            products: data.products ? data.products.map((product: any) => ({
+              id: product.id,
+              productRef: product.product_ref,
+              productName: product.product_name,
+              purchaseValue: product.purchase_value,
+              saleValue: product.sale_value
+            })) : []
+          };
+          setSales(prev => prev.map(s => s.id === transformedSale.id ? transformedSale : s));
+          setDbStatus('connected');
+          toast({ title: "Produtos sincronizados", description: "Atualização em tempo real aplicada." });
+        } catch (err) {
+          console.error('Erro no realtime products:', err);
+          setDbStatus('error');
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const [selectedMonth, setSelectedMonth] = useState<string>("total");
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Removed localStorage persistence since we're using Supabase now
+  // Removed localStorage persistence since we're usando Supabase agora
 
   const handleSaleAdded = async (sale: Sale) => {
     // Persist sale to Supabase, then update local state with returned id
@@ -500,7 +597,10 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground hidden md:block">Gestão elegante e eficiente</p>
               </div>
             </div>
-            <nav className="flex gap-2">
+            <nav className="flex gap-2 items-center">
+              <Badge variant={dbStatus === 'connected' ? 'default' : 'outline'} className={dbStatus === 'connected' ? 'bg-emerald-600 text-white' : dbStatus === 'error' ? 'border-red-600 text-red-600' : ''}>
+                {dbStatus === 'connected' ? 'Conectado' : dbStatus === 'error' ? 'Offline' : 'Conectando...'}
+              </Badge>
               <Button variant="outline" asChild>
                 <Link to="/a-pagar">A Pagar</Link>
               </Button>
@@ -624,6 +724,236 @@ const Index = () => {
       </footer>
     </div>
   );
+};
+
+export default Index;
+
+const channel = supabase
+  .channel('realtime-sales')
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, async (payload: any) => {
+    try {
+      const saleId = payload.new?.id || payload.old?.id;
+      if (!saleId) return;
+      const { data, error } = await supabase
+        .from('sales')
+        .select(`*, products (*)`)
+        .eq('id', saleId)
+        .single();
+      if (error) { console.error('Realtime fetch error:', error); setDbStatus('error'); return; }
+      const transformedSale: Sale = {
+        id: data.id,
+        customerName: data.customer_name,
+        purchaseDate: data.purchase_date,
+        paymentDate: data.payment_date,
+        paymentMethod: data.payment_method,
+        installments: data.installments,
+        installmentValues: data.installment_values,
+        installmentDates: data.installment_dates,
+        advancePayment: data.advance_payment,
+        discount: data.discount,
+        products: data.products ? data.products.map((product: any) => ({
+          id: product.id,
+          productRef: product.product_ref,
+          productName: product.product_name,
+          purchaseValue: product.purchase_value,
+          saleValue: product.sale_value
+        })) : []
+      };
+      setSales(prev => {
+        const exists = prev.find(s => s.id === transformedSale.id);
+        if (exists) {
+          return prev.map(s => s.id === transformedSale.id ? transformedSale : s);
+        }
+        return [transformedSale, ...prev];
+      });
+      setDbStatus('connected');
+      toast({ title: "Dados sincronizados", description: "Atualização em tempo real aplicada." });
+    } catch (err) {
+      console.error('Erro no realtime sales:', err);
+      setDbStatus('error');
+    }
+  })
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, async (payload: any) => {
+    try {
+      const saleId = payload.new?.sale_id || payload.old?.sale_id;
+      if (!saleId) return;
+      const { data, error } = await supabase
+        .from('sales')
+        .select(`*, products (*)`)
+        .eq('id', saleId)
+        .single();
+      if (error) { console.error('Realtime fetch error (products):', error); setDbStatus('error'); return; }
+      const transformedSale: Sale = {
+        id: data.id,
+        customerName: data.customer_name,
+        purchaseDate: data.purchase_date,
+        paymentDate: data.payment_date,
+        paymentMethod: data.payment_method,
+        installments: data.installments,
+        installmentValues: data.installment_values,
+        installmentDates: data.installment_dates,
+        advancePayment: data.advance_payment,
+        discount: data.discount,
+        products: data.products ? data.products.map((product: any) => ({
+          id: product.id,
+          productRef: product.product_ref,
+          productName: product.product_name,
+          purchaseValue: product.purchase_value,
+          saleValue: product.sale_value
+        })) : []
+      };
+      setSales(prev => prev.map(s => s.id === transformedSale.id ? transformedSale : s));
+      setDbStatus('connected');
+      toast({ title: "Produtos sincronizados", description: "Atualização em tempo real aplicada." });
+    } catch (err) {
+      console.error('Erro no realtime products:', err);
+      setDbStatus('error');
+    }
+  })
+  .subscribe();
+
+return () => {
+  supabase.removeChannel(channel);
+};
+
+{/* Header */}
+<header className="bg-card/70 backdrop-blur-md border-b border-border/40 shadow-[var(--shadow-card)] sticky top-0 z-50 backdrop-saturate-110">
+  <div className="container mx-auto px-4 py-4">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <img src={logo} alt="Ellas Concept" className="h-12 md:h-16 w-auto" />
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Controle de Vendas
+          </h1>
+          <p className="text-sm text-muted-foreground hidden md:block">Gestão elegante e eficiente</p>
+        </div>
+      </div>
+      <nav className="flex gap-2 items-center">
+        {/* Indicador de status do banco */}
+        <Badge variant={dbStatus === 'connected' ? 'default' : 'outline'} className={dbStatus === 'connected' ? 'bg-emerald-600 text-white' : dbStatus === 'error' ? 'border-red-600 text-red-600' : ''}>
+          {dbStatus === 'connected' ? 'Conectado' : dbStatus === 'error' ? 'Offline' : 'Conectando...'}
+        </Badge>
+      </nav>
+    </div>
+  </div>
+</header>
+
+{/* Main Content */}
+<main className="container mx-auto px-4 py-8">
+  {/* Filters */}
+  {sales.length > 0 && (
+    <div className="mb-6 flex gap-4 items-end">
+      <div className="max-w-xs">
+        <Label htmlFor="month-filter" className="text-foreground mb-2 block">Filtrar por mês</Label>
+        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+          <SelectTrigger id="month-filter" className="bg-card">
+            <SelectValue placeholder="Selecione o mês" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="total">Total (Todos os meses)</SelectItem>
+            {availableMonths.map(month => (
+              <SelectItem key={month} value={month}>
+                {getMonthLabel(month)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex-1 max-w-xs relative">
+        <Label htmlFor="search" className="text-foreground mb-2 block">Buscar</Label>
+        <div className="relative">
+          <Input
+            id="search"
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+          >
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </svg>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* Statistics Cards */}
+  {sales.length > 0 && (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8 max-w-4xl mx-auto">
+      <div className="bg-gradient-to-br from-violet-50 to-fuchsia-50 dark:from-violet-950/30 dark:to-fuchsia-950/30 p-6 rounded-2xl shadow-lg border border-violet-100/50 dark:border-violet-800/30 text-center group hover:scale-105 transition-transform">
+        <p className="text-sm font-semibold text-violet-700 dark:text-violet-300 mb-2 group-hover:text-violet-800 transition-colors">Total de Vendas</p>
+        <p className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">{filteredSales.length}</p>
+      </div>
+      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 p-6 rounded-2xl shadow-lg border border-blue-100/50 dark:border-blue-800/30 text-center group hover:scale-105 transition-transform">
+        <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2 group-hover:text-blue-800 transition-colors">
+          Total a receber<br/>
+          <span className="text-xs opacity-75">({selectedMonth === "total" ? "Todos os meses" : getMonthLabel(selectedMonth)})</span>
+        </p>
+        <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+          R$ {totalSales.toFixed(2)}
+        </p>
+      </div>
+      <div className="bg-gradient-to-br from-rose-50 to-red-50 dark:from-rose-950/30 dark:to-red-950/30 p-6 rounded-2xl shadow-lg border border-rose-100/50 dark:border-rose-800/30 text-center group hover:scale-105 transition-transform">
+        <p className="text-sm font-semibold text-rose-700 dark:text-rose-300 mb-2 group-hover:text-rose-800 transition-colors">
+          Total a Pagar<br/>
+          <span className="text-xs opacity-75">({selectedMonth === "total" ? "Todos os meses" : getMonthLabel(selectedMonth)})</span>
+        </p>
+        <p className="text-3xl font-bold bg-gradient-to-r from-rose-600 to-red-600 bg-clip-text text-transparent">
+          R$ {totalExpenses.toFixed(2)}
+        </p>
+      </div>
+      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 p-6 rounded-2xl shadow-lg border border-emerald-100/50 dark:border-emerald-800/30 text-center group hover:scale-105 transition-transform">
+        <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300 mb-2 group-hover:text-emerald-800 transition-colors">Lucro Total</p>
+        <p className={`text-3xl font-bold ${
+          totalProfit >= 0 
+          ? 'bg-gradient-to-r from-emerald-600 to-teal-600' 
+          : 'bg-gradient-to-r from-rose-600 to-red-600'
+        } bg-clip-text text-transparent`}>
+          R$ {totalProfit.toFixed(2)}
+        </p>
+      </div>
+    </div>
+  )}
+
+  {/* Sales Form */}
+  <div className="mb-8">
+    <SalesForm 
+      onSaleAdded={handleSaleAdded} 
+      editingSale={editingSale}
+      onSaleUpdated={handleSaleUpdated}
+    />
+  </div>
+
+  {/* Sales List */}
+  <SalesList 
+    sales={filteredSales} 
+    onDeleteSale={handleDeleteSale}
+    onEditSale={handleEditSale}
+    onUpdateSale={handleSaleUpdated}
+    selectedMonth={selectedMonth}
+  />
+</main>
+
+{/* Footer */}
+<footer className="mt-16 py-6 border-t border-border bg-card/50">
+  <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+    <p>© 2025 Ellas Concept - Sistema de Controle de Vendas</p>
+  </div>
+</footer>
+</div>
+);
 };
 
 export default Index;

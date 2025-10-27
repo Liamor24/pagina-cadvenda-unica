@@ -8,7 +8,9 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:db": "node test_supabase.js",
+    "test:sales-crud": "node tests/sales_crud.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

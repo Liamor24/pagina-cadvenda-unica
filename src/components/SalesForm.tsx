@@ -242,7 +242,7 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!customerName || !purchaseDate || !paymentDate) {
@@ -272,6 +272,12 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
       return;
     }
 
+    // Mostrar feedback de salvamento em andamento
+    toast({
+      title: "Salvando dados...",
+      description: "Aguarde enquanto os dados são salvos no banco de dados.",
+    });
+
     const saleData: Sale = {
       id: editingSale?.id || Date.now().toString(),
       customerName,
@@ -286,37 +292,46 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
       products: [...products],
     };
 
-    if (editingSale && onSaleUpdated) {
-      onSaleUpdated(saleData);
-    } else {
-      onSaleAdded(saleData);
+    try {
+      if (editingSale && onSaleUpdated) {
+        await onSaleUpdated(saleData);
+      } else {
+        await onSaleAdded(saleData);
+      }
+
+      // Reset form após sucesso
+      const newToday = new Date();
+      const newOneMonthLater = new Date(newToday);
+      newOneMonthLater.setMonth(newOneMonthLater.getMonth() + 1);
+      
+      setCustomerName("");
+      setProductRef("");
+      setProductName("");
+      setPurchaseValue("");
+      setSaleValue("");
+      setPurchaseDate(formatDate(newToday));
+      setPaymentDate(formatDate(newOneMonthLater));
+      setPaymentMethod("pix");
+      setInstallments(1);
+      setInstallmentValues([""]);
+      setManuallyEditedInstallments([false]);
+      setAdvancePayment("");
+      setDiscount("");
+      setProducts([]);
+      setEditingProductId(null);
+
+      toast({
+        title: editingSale ? "Venda atualizada!" : "Venda registrada!",
+        description: editingSale ? "A venda foi atualizada com sucesso no banco de dados." : "A venda foi adicionada com sucesso ao banco de dados.",
+      });
+    } catch (error) {
+      console.error('Erro ao salvar venda:', error);
+      toast({
+        title: "Erro ao salvar dados",
+        description: "Ocorreu um erro ao salvar os dados. Verifique sua conexão e tente novamente.",
+        variant: "destructive",
+      });
     }
-
-    // Reset form
-    const newToday = new Date();
-    const newOneMonthLater = new Date(newToday);
-    newOneMonthLater.setMonth(newOneMonthLater.getMonth() + 1);
-    
-    setCustomerName("");
-    setProductRef("");
-    setProductName("");
-    setPurchaseValue("");
-    setSaleValue("");
-    setPurchaseDate(formatDate(newToday));
-    setPaymentDate(formatDate(newOneMonthLater));
-    setPaymentMethod("pix");
-    setInstallments(1);
-    setInstallmentValues([""]);
-    setManuallyEditedInstallments([false]);
-    setAdvancePayment("");
-  setDiscount("");
-    setProducts([]);
-    setEditingProductId(null);
-
-    toast({
-      title: editingSale ? "Venda atualizada!" : "Venda registrada!",
-      description: editingSale ? "A venda foi atualizada com sucesso." : "A venda foi adicionada com sucesso.",
-    });
   };
 
   return (
