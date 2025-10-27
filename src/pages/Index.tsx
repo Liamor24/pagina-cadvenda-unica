@@ -252,6 +252,8 @@ const Index = () => {
       const saleId = saleInsert.id;
       console.log('Sale inserted with ID:', saleId);
 
+
+
       // Optimistically update local state before inserting products
       const persistedSale: Sale = { ...sale, id: saleId };
       setSales(prev => [persistedSale, ...prev]);
