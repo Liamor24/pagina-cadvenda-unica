@@ -348,7 +348,7 @@ const Index = () => {
       console.log('📦 Dados mesclados para update:', merged);
 
       // Atualizar venda com retorno para confirmar persistência
-      const { data: updatedRow, error: saleError } = await supabase
+      let { data: updatedRow, error: saleError } = await supabase
         .from('sales')
         .update({
           customer_name: merged.customerName,
@@ -365,9 +365,41 @@ const Index = () => {
         .select()
         .single();
 
+      // Fallback: se coluna 'discount' não existir no banco, tenta novamente sem ela
       if (saleError) {
-        console.error('❌ Erro ao atualizar venda:', saleError);
-        throw saleError;
+        const msg = String(saleError?.message ?? '');
+        const hint = String((saleError as any)?.hint ?? '');
+        const details = String((saleError as any)?.details ?? '');
+        const combined = `${msg} ${hint} ${details}`.toLowerCase();
+        if (combined.includes('discount') && (combined.includes('column') || combined.includes('schema'))) {
+          console.warn('⚠️ Coluna discount ausente no banco. Tentando update sem discount...');
+          const { data: retryRow, error: retryErr } = await supabase
+            .from('sales')
+            .update({
+              customer_name: merged.customerName,
+              purchase_date: merged.purchaseDate,
+              payment_date: merged.paymentDate,
+              payment_method: merged.paymentMethod,
+              installments: merged.installments ?? null,
+              installment_values: merged.installmentValues ?? null,
+              installment_dates: merged.installmentDates ?? null,
+              advance_payment: merged.advancePayment ?? null,
+            })
+            .eq('id', merged.id)
+            .select()
+            .single();
+          if (retryErr) {
+            console.error('❌ Erro ao atualizar venda (fallback sem discount) também falhou:', retryErr);
+            throw retryErr;
+          }
+          updatedRow = retryRow;
+          saleError = null as any;
+          // Também atualiza modelo local removendo discount
+          delete (merged as any).discount;
+        } else {
+          console.error('❌ Erro ao atualizar venda:', saleError);
+          throw saleError;
+        }
       }
       console.log('✅ Venda atualizada no banco (retorno):', updatedRow);
 
@@ -376,8 +408,14 @@ const Index = () => {
       const { error: delError } = await supabase.from('products').delete().eq('sale_id', merged.id);
       if (delError) {
         console.error('❌ Erro ao deletar produtos:', delError);
-        // Não interromper atualização da venda; apenas informar
-        toast({ title: 'Erro ao atualizar produtos', description: 'Venda atualizada, mas falhou ao atualizar produtos.', variant: 'destructive' });
+        // Se tabela products não existir, apenas alerta e segue
+        const delMsg = String(delError?.message ?? '').toLowerCase();
+        if (delMsg.includes('relation') && delMsg.includes('products') && delMsg.includes('does not exist')) {
+          toast({ title: 'Tabela de produtos ausente', description: 'Venda atualizada, mas tabela products não existe no banco.', variant: 'destructive' });
+        } else {
+          // Não interromper atualização da venda; apenas informar
+          toast({ title: 'Erro ao atualizar produtos', description: 'Venda atualizada, mas falhou ao atualizar produtos.', variant: 'destructive' });
+        }
       }
 
       if (merged.products && merged.products.length > 0) {
@@ -392,7 +430,12 @@ const Index = () => {
         const { error: prodError } = await supabase.from('products').insert(productsToInsert);
         if (prodError) {
           console.error('❌ Erro ao inserir novos produtos:', prodError);
-          toast({ title: 'Produtos não atualizados', description: 'Venda atualizada, mas houve erro ao salvar produtos.', variant: 'destructive' });
+          const insMsg = String(prodError?.message ?? '').toLowerCase();
+          if (insMsg.includes('relation') && insMsg.includes('products') && insMsg.includes('does not exist')) {
+            toast({ title: 'Tabela de produtos ausente', description: 'Venda atualizada, mas tabela products não existe no banco.', variant: 'destructive' });
+          } else {
+            toast({ title: 'Produtos não atualizados', description: 'Venda atualizada, mas houve erro ao salvar produtos.', variant: 'destructive' });
+          }
         }
       }
 
