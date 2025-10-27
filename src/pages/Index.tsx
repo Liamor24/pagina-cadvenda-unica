@@ -252,6 +252,11 @@ const Index = () => {
       const saleId = saleInsert.id;
       console.log('Sale inserted with ID:', saleId);
 
+      // Optimistically update local state before inserting products
+      const persistedSale: Sale = { ...sale, id: saleId };
+      setSales(prev => [persistedSale, ...prev]);
+      setEditingSale(null);
+
       // Insert products linked to sale
       if (sale.products && sale.products.length > 0) {
         const productsToInsert = sale.products.map(p => ({
@@ -266,16 +271,17 @@ const Index = () => {
         const { error: prodError } = await supabase.from('products').insert(productsToInsert);
         if (prodError) {
           console.error('Error inserting products:', prodError);
-          throw prodError;
+          toast({
+            title: "Produtos não salvos",
+            description: "A venda foi criada, mas houve erro ao salvar os produtos.",
+            variant: "destructive",
+          });
+        } else {
+          console.log('Products inserted successfully');
         }
-        console.log('Products inserted successfully');
       }
 
-      // Update local state using the sale id from database
-      const persistedSale: Sale = { ...sale, id: saleId };
-      setSales(prev => [persistedSale, ...prev]);
-      setEditingSale(null);
-      
+      // Success feedback
       toast({
         title: "Venda salva!",
         description: "A venda foi salva com sucesso no banco de dados.",
