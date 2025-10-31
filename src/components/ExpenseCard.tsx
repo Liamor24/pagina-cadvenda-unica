@@ -145,12 +145,15 @@ const ExpenseCard = ({
           )}
         </div>
 
-        {expense.observacao && (
-          <div>
-            <p className="text-sm text-muted-foreground">Observação</p>
-            <p className="text-sm">{expense.observacao}</p>
-          </div>
-        )}
+        {expense.observacao && (() => {
+          const displayObs = expense.observacao.replace(/\s*pago_em[:=]\s*\d{4}-\d{2}-\d{2}\s*/g, ' ').trim();
+          return displayObs ? (
+            <div>
+              <p className="text-sm text-muted-foreground">Observação</p>
+              <p className="text-sm">{displayObs}</p>
+            </div>
+          ) : null;
+        })()}
 
         {hasInstallments && (
           <Collapsible open={isOpen} onOpenChange={setIsOpen}>

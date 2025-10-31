@@ -23,6 +23,21 @@ export interface Expense {
   observacao?: string;
   pagoEm?: string | null;
 }
+// Helpers para fallback quando a coluna pago_em não existe no banco
+const extractPagoEmFromObservation = (obs?: string | null): string | null => {
+  if (!obs) return null;
+  const m = obs.match(/pago_em[:=]\s*(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : null;
+};
+
+const mergePagoEmIntoObservation = (existing: string | null | undefined, pagoEm: string | null | undefined): string | null => {
+  const base = existing || "";
+  // remove marcador antigo se existir
+  const cleaned = base.replace(/\s*pago_em[:=]\s*\d{4}-\d{2}-\d{2}\s*/g, " ").trim();
+  if (!pagoEm) return cleaned.length ? cleaned : null;
+  const marker = `pago_em=${pagoEm}`;
+  return cleaned ? `${cleaned} ${marker}` : marker;
+};
 const APagar = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("TODOS");
@@ -104,7 +119,8 @@ const APagar = () => {
             parcelaAtual: expense.parcela_atual,
             mesReferencia: expense.mes_referencia,
             observacao: expense.observacao,
-            pagoEm: expense.pago_em ?? null
+            // Se a coluna pago_em não existir, tentamos extrair da observacao
+            pagoEm: (typeof expense.pago_em !== 'undefined' ? expense.pago_em : extractPagoEmFromObservation(expense.observacao)) ?? null
           }));
 
           setExpenses(transformedExpenses);
@@ -167,8 +183,28 @@ const APagar = () => {
       setEditingExpense(null);
     } catch (err) {
       console.error('Error updating expense in Supabase:', err);
-      setExpenses(expenses.map(exp => exp.id === updatedExpense.id ? updatedExpense : exp));
-      setEditingExpense(null);
+      // Fallback: tentar persistir pagoEm dentro de observacao
+      try {
+        const mergedObs = mergePagoEmIntoObservation(updatedExpense.observacao, updatedExpense.pagoEm ?? null);
+        await supabase.from('expenses').update({
+          descricao: updatedExpense.descricao,
+          categoria: updatedExpense.categoria,
+          data: updatedExpense.data,
+          valor_total: updatedExpense.valorTotal,
+          forma_pagamento: updatedExpense.formaPagamento,
+          parcelas: updatedExpense.parcelas ?? null,
+          parcela_atual: updatedExpense.parcelaAtual ?? null,
+          mes_referencia: updatedExpense.mesReferencia,
+          observacao: mergedObs,
+        }).eq('id', updatedExpense.id);
+        const patched = { ...updatedExpense, observacao: mergedObs };
+        setExpenses(expenses.map(exp => exp.id === updatedExpense.id ? patched : exp));
+      } catch (err2) {
+        console.warn('Fallback update failed, applying local state only.', err2);
+        setExpenses(expenses.map(exp => exp.id === updatedExpense.id ? updatedExpense : exp));
+      } finally {
+        setEditingExpense(null);
+      }
     }
   };
 
@@ -192,9 +228,23 @@ const APagar = () => {
 
       setExpenses(prev => prev.map(e => e.id === patch.id ? { ...e, ...patch } : e));
     } catch (err: any) {
-      console.warn('Falha ao atualizar despesa no Supabase, aplicando fallback local.', err?.message || err);
-      // Fallback local para manter UX, útil se a coluna pago_em não existir ainda
-      setExpenses(prev => prev.map(e => e.id === patch.id ? { ...e, ...patch } : e));
+      console.warn('Falha ao atualizar despesa no Supabase. Tentando persistir via observacao.', err?.message || err);
+      try {
+        if (patch.pagoEm !== undefined) {
+          // Persistir pagoEm dentro de observacao como marcador
+          const current = expenses.find(e => e.id === patch.id);
+          const mergedObs = mergePagoEmIntoObservation(current?.observacao, patch.pagoEm);
+          await supabase.from('expenses').update({ observacao: mergedObs }).eq('id', patch.id);
+          const patchWithObs = { ...patch, observacao: mergedObs };
+          setExpenses(prev => prev.map(e => e.id === patch.id ? { ...e, ...patchWithObs } : e));
+        } else {
+          // sem pagoEm, aplica local
+          setExpenses(prev => prev.map(e => e.id === patch.id ? { ...e, ...patch } : e));
+        }
+      } catch (err2) {
+        console.warn('Fallback observacao update failed, aplicando local somente.', err2);
+        setExpenses(prev => prev.map(e => e.id === patch.id ? { ...e, ...patch } : e));
+      }
     }
   };
   const handleEditExpense = (expense: Expense) => {
