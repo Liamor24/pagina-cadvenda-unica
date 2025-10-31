@@ -138,6 +138,7 @@ const APagar = () => {
     try {
       // Insert expenses and/or installments
       for (const exp of newExpenses) {
+        // Inserir sem depender de pago_em (coluna pode não existir)
         const { data: inserted, error } = await supabase.from('expenses').insert({
           descricao: exp.descricao,
           categoria: exp.categoria,
@@ -148,7 +149,6 @@ const APagar = () => {
           parcela_atual: exp.parcelaAtual ?? null,
           mes_referencia: exp.mesReferencia,
           observacao: exp.observacao ?? null,
-          pago_em: exp.pagoEm ?? null,
         }).select('id').single();
 
         if (error) throw error;
@@ -156,6 +156,25 @@ const APagar = () => {
         // Update local state with the returned id
         const persisted = { ...exp, id: inserted.id };
         setExpenses(prev => [...prev, persisted]);
+
+        // Se precisar marcar pago, tentar atualizar pago_em; caso falhe, usar observacao
+        if (exp.pagoEm) {
+          try {
+            const { error: updErr } = await supabase
+              .from('expenses')
+              .update({ pago_em: exp.pagoEm })
+              .eq('id', inserted.id);
+            if (updErr) {
+              const mergedObs = mergePagoEmIntoObservation(persisted.observacao, exp.pagoEm);
+              await supabase.from('expenses').update({ observacao: mergedObs }).eq('id', inserted.id);
+              setExpenses(prev => prev.map(e => e.id === inserted.id ? { ...e, observacao: mergedObs } : e));
+            }
+          } catch {
+            const mergedObs = mergePagoEmIntoObservation(persisted.observacao, exp.pagoEm);
+            await supabase.from('expenses').update({ observacao: mergedObs }).eq('id', inserted.id);
+            setExpenses(prev => prev.map(e => e.id === inserted.id ? { ...e, observacao: mergedObs } : e));
+          }
+        }
       }
     } catch (err) {
       console.error('Error inserting expenses to Supabase:', err);
