@@ -25,9 +25,10 @@ interface ExpenseListProps {
   expenses: Expense[];
   onEditExpense: (expense: Expense) => void;
   onDeleteExpense: (expenseId: string) => void;
+  onUpdateExpense?: (expense: Partial<Expense> & { id: string }) => void | Promise<void>;
 }
 
-const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: ExpenseListProps) => {
+const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense, onUpdateExpense }: ExpenseListProps) => {
   const getCategoryBadge = (categoria: Expense["categoria"]) => {
     const variants: Record<Expense["categoria"], { variant: "default" | "secondary" | "outline", className: string }> = {
       "Estoque": { variant: "default", className: "bg-blue-500 hover:bg-blue-600" },
@@ -70,20 +71,21 @@ const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: ExpenseListPr
   }, {} as Record<string, Expense[]>);
 
   // Ordenar grupos por:
-  // 1. Quitado (não quitados primeiro)
-  // 2. Data mais recente
-  // 3. Parcelas restantes (mais parcelas primeiro)
+  // 1. Quitado (não quitados primeiro) — quitado somente quando todas parcelas do grupo têm pagoEm preenchido e já no passado
+  // 2. Parcelas restantes (mais parcelas abertas primeiro)
+  // 3. Data mais recente
   const sortedGroups = Object.values(groupedExpenses).sort((a, b) => {
-    const aQuitado = a[0].formaPagamento === "Parcelado" && a[0].parcelaAtual === a[0].parcelas;
-    const bQuitado = b[0].formaPagamento === "Parcelado" && b[0].parcelaAtual === b[0].parcelas;
+    const now = new Date();
+    const aQuitado = a[0].formaPagamento === "Parcelado" && a.every(it => it.pagoEm && new Date(it.pagoEm) < now);
+    const bQuitado = b[0].formaPagamento === "Parcelado" && b.every(it => it.pagoEm && new Date(it.pagoEm) < now);
     
     // Quitados vão para o final
     if (aQuitado !== bQuitado) return aQuitado ? 1 : -1;
 
-    // Se ambos são parcelados, compara parcelas restantes
+    // Se ambos são parcelados, compara parcelas restantes (não pagas ou com pagoEm futuro)
     if (a[0].formaPagamento === "Parcelado" && b[0].formaPagamento === "Parcelado") {
-      const aRestantes = a[0].parcelas! - (a[0].parcelaAtual ?? 0);
-      const bRestantes = b[0].parcelas! - (b[0].parcelaAtual ?? 0);
+      const aRestantes = a.filter(it => !it.pagoEm || new Date(it.pagoEm) > now).length;
+      const bRestantes = b.filter(it => !it.pagoEm || new Date(it.pagoEm) > now).length;
       if (aRestantes !== bRestantes) return bRestantes - aRestantes;
     }
 
@@ -116,6 +118,7 @@ const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: ExpenseListPr
             installments={hasInstallments ? group : undefined}
             onEdit={onEditExpense}
             onDelete={onDeleteExpense}
+            onUpdate={onUpdateExpense}
             getCategoryBadge={getCategoryBadge}
             formatCurrency={formatCurrency}
             formatDate={formatDate}

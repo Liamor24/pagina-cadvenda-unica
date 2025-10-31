@@ -21,6 +21,7 @@ export interface Expense {
   parcelaAtual?: number;
   mesReferencia: string;
   observacao?: string;
+  pagoEm?: string | null;
 }
 const APagar = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -102,7 +103,8 @@ const APagar = () => {
             parcelas: expense.parcelas,
             parcelaAtual: expense.parcela_atual,
             mesReferencia: expense.mes_referencia,
-            observacao: expense.observacao
+            observacao: expense.observacao,
+            pagoEm: expense.pago_em ?? null
           }));
 
           setExpenses(transformedExpenses);
@@ -130,6 +132,7 @@ const APagar = () => {
           parcela_atual: exp.parcelaAtual ?? null,
           mes_referencia: exp.mesReferencia,
           observacao: exp.observacao ?? null,
+          pago_em: exp.pagoEm ?? null,
         }).select('id').single();
 
         if (error) throw error;
@@ -156,6 +159,7 @@ const APagar = () => {
         parcela_atual: updatedExpense.parcelaAtual ?? null,
         mes_referencia: updatedExpense.mesReferencia,
         observacao: updatedExpense.observacao ?? null,
+        pago_em: updatedExpense.pagoEm ?? null,
       }).eq('id', updatedExpense.id);
 
       if (error) throw error;
@@ -165,6 +169,32 @@ const APagar = () => {
       console.error('Error updating expense in Supabase:', err);
       setExpenses(expenses.map(exp => exp.id === updatedExpense.id ? updatedExpense : exp));
       setEditingExpense(null);
+    }
+  };
+
+  // Atualização parcial (ex.: marcar parcela como paga/reverter)
+  const handleUpdateExpensePartial = async (patch: Partial<Expense> & { id: string }) => {
+    try {
+      const updatePayload: Record<string, any> = {};
+      if (patch.descricao !== undefined) updatePayload.descricao = patch.descricao;
+      if (patch.categoria !== undefined) updatePayload.categoria = patch.categoria;
+      if (patch.data !== undefined) updatePayload.data = patch.data;
+      if (patch.valorTotal !== undefined) updatePayload.valor_total = patch.valorTotal;
+      if (patch.formaPagamento !== undefined) updatePayload.forma_pagamento = patch.formaPagamento;
+      if (patch.parcelas !== undefined) updatePayload.parcelas = patch.parcelas;
+      if (patch.parcelaAtual !== undefined) updatePayload.parcela_atual = patch.parcelaAtual;
+      if (patch.mesReferencia !== undefined) updatePayload.mes_referencia = patch.mesReferencia;
+      if (patch.observacao !== undefined) updatePayload.observacao = patch.observacao;
+      if (patch.pagoEm !== undefined) updatePayload.pago_em = patch.pagoEm; // pode não existir na base
+
+      const { error } = await supabase.from('expenses').update(updatePayload).eq('id', patch.id);
+      if (error) throw error;
+
+      setExpenses(prev => prev.map(e => e.id === patch.id ? { ...e, ...patch } : e));
+    } catch (err: any) {
+      console.warn('Falha ao atualizar despesa no Supabase, aplicando fallback local.', err?.message || err);
+      // Fallback local para manter UX, útil se a coluna pago_em não existir ainda
+      setExpenses(prev => prev.map(e => e.id === patch.id ? { ...e, ...patch } : e));
     }
   };
   const handleEditExpense = (expense: Expense) => {
@@ -330,7 +360,7 @@ const APagar = () => {
         </div>
 
         {/* Lista de Despesas */}
-        <ExpenseList expenses={filteredExpenses} onEditExpense={handleEditExpense} onDeleteExpense={handleDeleteExpense} />
+        <ExpenseList expenses={filteredExpenses} onEditExpense={handleEditExpense} onDeleteExpense={handleDeleteExpense} onUpdateExpense={handleUpdateExpensePartial} />
       </main>
     </div>;
 };

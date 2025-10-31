@@ -26,6 +26,7 @@ interface ExpenseCardProps {
   installments?: Expense[];
   onEdit: (expense: Expense) => void;
   onDelete: (expenseId: string) => void;
+  onUpdate?: (expense: Partial<Expense> & { id: string }) => void | Promise<void>;
   getCategoryBadge: (categoria: Expense["categoria"]) => JSX.Element;
   formatCurrency: (value: number) => string;
   formatDate: (dateString: string) => string;
@@ -36,6 +37,7 @@ const ExpenseCard = ({
   installments,
   onEdit,
   onDelete,
+  onUpdate,
   getCategoryBadge,
   formatCurrency,
   formatDate,
@@ -52,7 +54,9 @@ const ExpenseCard = ({
   // Pegar valor da parcela baseado no mês de referência da despesa
   const currentValue = expense.valorTotal;
 
-  const isQuitado = expense.formaPagamento === "Parcelado" && expense.parcelaAtual === expense.parcelas;
+  // Quitado somente quando todas as parcelas do grupo estão com pagoEm preenchido e já no passado
+  const isQuitado = expense.formaPagamento === "Parcelado" && Array.isArray(installments) && installments.length > 0 &&
+    installments.every(it => it.pagoEm && new Date(it.pagoEm) < new Date());
 
   return (
     <Card 
@@ -130,7 +134,13 @@ const ExpenseCard = ({
           </Badge>
           {expense.formaPagamento === "Parcelado" && (
             <span className="text-sm text-muted-foreground">
-              {expense.parcelaAtual}/{expense.parcelas} parcelas
+              {/* parcelas abertas restantes */}
+              {(() => {
+                if (!Array.isArray(installments)) return `0/${expense.parcelas} parcelas`;
+                const now = new Date();
+                const remaining = installments.filter(it => !it.pagoEm || new Date(it.pagoEm) > now).length;
+                return `${remaining}/${expense.parcelas} parcelas`;
+              })()}
             </span>
           )}
         </div>
@@ -167,9 +177,45 @@ const ExpenseCard = ({
                           <p className="font-medium text-sm">Parcela {installment.parcelaAtual}/{installment.parcelas}</p>
                           <p className="text-xs text-muted-foreground">{installment.mesReferencia}</p>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right flex items-center gap-2">
                           <p className="font-semibold">{formatCurrency(installment.valorTotal)}</p>
-                          <p className="text-xs text-muted-foreground">{new Date(installment.data || installment.data).toLocaleDateString('pt-BR')}</p>
+                          {(() => {
+                            const isPaid = installment.pagoEm && new Date(installment.pagoEm) < new Date();
+                            return isPaid ? (
+                              <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-600">Pago</Badge>
+                            ) : null;
+                          })()}
+                          <div className="flex items-center gap-2 ml-3">
+                            {/* Marcar como Pago */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                if (typeof onUpdate === 'function') {
+                                  await onUpdate({ id: installment.id, pagoEm: new Date().toISOString().split('T')[0] });
+                                }
+                              }}
+                              title="Marcar como Pago"
+                            >
+                              {/* reutilizando check via ícone Pencil se não houver ícone específico */}
+                              <Badge className="hidden" />
+                              <span className="text-xs">Pagar</span>
+                            </Button>
+
+                            {/* Reverter pagamento */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                if (typeof onUpdate === 'function') {
+                                  await onUpdate({ id: installment.id, pagoEm: null });
+                                }
+                              }}
+                              title="Reverter pagamento"
+                            >
+                              <span className="text-xs">Reverter</span>
+                            </Button>
+                          </div>
                         </div>
                         <div className="flex gap-1 ml-3">
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(installment)}>
