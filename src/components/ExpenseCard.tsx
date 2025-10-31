@@ -58,6 +58,21 @@ const ExpenseCard = ({
   const isQuitado = expense.formaPagamento === "Parcelado" && Array.isArray(installments) && installments.length > 0 &&
     installments.every(it => it.pagoEm && new Date(it.pagoEm) < new Date());
 
+  // Data de compra: se parcelado, usar a menor data das parcelas; caso contrário, usar a própria data
+  const purchaseDateStr = (() => {
+    if (Array.isArray(installments) && installments.length > 0) {
+      const earliest = installments
+        .map(it => new Date(it.data))
+        .reduce((min, d) => (d < min ? d : min), new Date(installments[0].data));
+      return earliest.toLocaleDateString('pt-BR');
+    }
+    return formatDate(expense.data);
+  })();
+
+  // Status pago para entradas únicas (PIX ou parcela única)
+  const isSinglePayment = expense.formaPagamento === "PIX" || expense.parcelas === 1;
+  const isSinglePaid = !!(expense.pagoEm && new Date(expense.pagoEm) < new Date());
+
   return (
     <Card 
       className={`w-full shadow-md hover:shadow-lg transition-shadow border ${
@@ -75,7 +90,7 @@ const ExpenseCard = ({
             <div className="flex items-center justify-between gap-4">
               <div>
                 <CardTitle className="text-lg font-semibold">{expense.descricao}</CardTitle>
-                <CardDescription className="text-sm">{formatDate(expense.data)}</CardDescription>
+                <CardDescription className="text-sm">{purchaseDateStr}</CardDescription>
               </div>
 
               <div className="text-right">
@@ -144,6 +159,39 @@ const ExpenseCard = ({
             </span>
           )}
         </div>
+
+        {/* Ações para pagamentos únicos (PIX ou parcela única) */}
+        {isSinglePayment && (
+          <div className="flex items-center justify-end gap-2">
+            {isSinglePaid && (
+              <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-600">Pago</Badge>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                if (typeof onUpdate === 'function') {
+                  await onUpdate({ id: expense.id, pagoEm: new Date().toISOString().split('T')[0] });
+                }
+              }}
+              title="Marcar como Pago"
+            >
+              <span className="text-xs">Pagar</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                if (typeof onUpdate === 'function') {
+                  await onUpdate({ id: expense.id, pagoEm: null });
+                }
+              }}
+              title="Reverter pagamento"
+            >
+              <span className="text-xs">Reverter</span>
+            </Button>
+          </div>
+        )}
 
         {expense.observacao && (() => {
           const displayObs = expense.observacao.replace(/\s*pago_em[:=]\s*\d{4}-\d{2}-\d{2}\s*/g, ' ').trim();
