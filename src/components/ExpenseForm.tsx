@@ -49,6 +49,8 @@ const ExpenseForm = ({ onExpenseAdded, editingExpense, onExpenseUpdated }: Expen
   ): Expense[] => {
     const valorParcela = valor / numParcelas;
     const baseDate = new Date(dataPrimeiraParcela);
+    // Iniciar sempre no mês seguinte
+    baseDate.setMonth(baseDate.getMonth() + 1);
     const expenses: Expense[] = [];
 
     for (let i = 0; i < numParcelas; i++) {
@@ -121,7 +123,10 @@ const ExpenseForm = ({ onExpenseAdded, editingExpense, onExpenseUpdated }: Expen
       // Modo de criação
       if (formaPagamento === "PIX") {
         const dateObj = new Date(data);
-        const mesReferencia = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+        // Iniciar sempre no mês seguinte
+        const nextMonthDate = new Date(dateObj);
+        nextMonthDate.setMonth(dateObj.getMonth() + 1);
+        const mesReferencia = `${monthNames[nextMonthDate.getMonth()]} ${nextMonthDate.getFullYear()}`;
 
         const newExpense: Expense = {
           id: `${Date.now()}-${Math.random()}`,
@@ -266,7 +271,7 @@ const ExpenseForm = ({ onExpenseAdded, editingExpense, onExpenseUpdated }: Expen
                 <Input
                   id="parcelas"
                   type="number"
-                  min="2"
+                  min="1"
                   max="12"
                   value={parcelas}
                   onChange={(e) => setParcelas(e.target.value)}

@@ -291,6 +291,12 @@ const APagar = () => {
 
   // Calcular meses disponíveis
   const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  const parseMesReferenciaStart = (mesRef: string): Date => {
+    const [mesPt, anoStr] = mesRef.split(' ');
+    const mesIdx = monthNames.indexOf(mesPt);
+    const ano = parseInt(anoStr, 10);
+    return new Date(ano, mesIdx, 1);
+  };
   const availableMonths = Array.from(new Set(expenses.map(e => e.mesReferencia))).sort((a, b) => {
     const [mesA, anoA] = a.split(' ');
     const [mesB, anoB] = b.split(' ');
@@ -300,7 +306,13 @@ const APagar = () => {
   });
 
   // Cálculos de resumo
-  const totalMes = filteredExpenses.reduce((sum, e) => sum + e.valorTotal, 0);
+  // Excluir do total do mês parcelas que foram pagas ANTES do mês de vencimento (mesReferencia)
+  const totalMes = filteredExpenses.reduce((sum, e) => {
+    const vencimentoInicio = parseMesReferenciaStart(e.mesReferencia);
+    const pagoEmDate = e.pagoEm ? new Date(e.pagoEm) : null;
+    const pagoAntesDoMes = !!(pagoEmDate && pagoEmDate < vencimentoInicio);
+    return pagoAntesDoMes ? sum : sum + e.valorTotal;
+  }, 0);
   const totalGeral = expenses.reduce((sum, e) => sum + e.valorTotal, 0);
 
   // Calcular total de vendas para o mês selecionado
