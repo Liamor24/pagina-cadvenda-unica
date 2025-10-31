@@ -54,9 +54,22 @@ const ExpenseCard = ({
   // Pegar valor da parcela baseado no mês de referência da despesa
   const currentValue = expense.valorTotal;
 
-  // Quitado somente quando todas as parcelas do grupo estão com pagoEm preenchido e já no passado
-  const isQuitado = expense.formaPagamento === "Parcelado" && Array.isArray(installments) && installments.length > 0 &&
-    installments.every(it => it.pagoEm && new Date(it.pagoEm) < new Date());
+  // Quitado:
+  // - Parcelado: todas as parcelas com pagoEm no passado
+  // - Único (PIX/1 parcela): mês de referência anterior ao mês atual
+  const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  const parseMesReferenciaStart = (mesRef: string): Date => {
+    const [mesPt, anoStr] = mesRef.split(' ');
+    const mesIdx = monthNames.indexOf(mesPt);
+    const ano = parseInt(anoStr, 10);
+    return new Date(ano, mesIdx, 1);
+  };
+  const now = new Date();
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const isQuitadoParcelado = expense.formaPagamento === "Parcelado" && Array.isArray(installments) && installments.length > 0 &&
+    installments.every(it => it.pagoEm && new Date(it.pagoEm) < now);
+  const isQuitadoUnico = expense.formaPagamento !== "Parcelado" && parseMesReferenciaStart(expense.mesReferencia) < currentMonthStart;
+  const isQuitado = isQuitadoParcelado || isQuitadoUnico;
 
   // Data de compra: se parcelado, usar a menor data das parcelas; caso contrário, usar a própria data
   const purchaseDateStr = (() => {
@@ -69,9 +82,7 @@ const ExpenseCard = ({
     return formatDate(expense.data);
   })();
 
-  // Status pago para entradas únicas (PIX ou parcela única)
-  const isSinglePayment = expense.formaPagamento === "PIX" || expense.parcelas === 1;
-  const isSinglePaid = !!(expense.pagoEm && new Date(expense.pagoEm) < new Date());
+  // Entradas únicas não possuem ações de pagar/reverter; status é derivado pela data
 
   return (
     <Card 
@@ -160,38 +171,7 @@ const ExpenseCard = ({
           )}
         </div>
 
-        {/* Ações para pagamentos únicos (PIX ou parcela única) */}
-        {isSinglePayment && (
-          <div className="flex items-center justify-end gap-2">
-            {isSinglePaid && (
-              <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-600">Pago</Badge>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                if (typeof onUpdate === 'function') {
-                  await onUpdate({ id: expense.id, pagoEm: new Date().toISOString().split('T')[0] });
-                }
-              }}
-              title="Marcar como Pago"
-            >
-              <span className="text-xs">Pagar</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={async () => {
-                if (typeof onUpdate === 'function') {
-                  await onUpdate({ id: expense.id, pagoEm: null });
-                }
-              }}
-              title="Reverter pagamento"
-            >
-              <span className="text-xs">Reverter</span>
-            </Button>
-          </div>
-        )}
+        {/* Removido: ações de pagar/reverter para PIX ou 1 parcela */}
 
         {expense.observacao && (() => {
           const displayObs = expense.observacao.replace(/\s*pago_em[:=]\s*\d{4}-\d{2}-\d{2}\s*/g, ' ').trim();

@@ -60,8 +60,8 @@ const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense, onUpdateExpense
   const groupedExpenses = expenses.reduce((acc, expense) => {
     let baseKey: string;
     if (expense.formaPagamento === "Parcelado") {
-      const cleanObs = (expense.observacao || '').replace(/\s*pago_em[:=]\s*\d{4}-\d{2}-\d{2}\s*/g, ' ').trim();
-      baseKey = `${expense.descricao}::${expense.parcelas ?? 0}::${expense.categoria}::${cleanObs}`;
+      // Agrupar por descrição + número de parcelas somente, para não quebrar agrupamento após edições
+      baseKey = `${expense.descricao}::${expense.parcelas ?? 0}`;
     } else {
       baseKey = expense.id;
     }
@@ -75,10 +75,23 @@ const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense, onUpdateExpense
   // 1. Quitado (não quitados primeiro) — quitado somente quando todas parcelas do grupo têm pagoEm preenchido e já no passado
   // 2. Parcelas restantes (mais parcelas abertas primeiro)
   // 3. Data mais recente
+  const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  const parseMesReferenciaStart = (mesRef: string): Date => {
+    const [mesPt, anoStr] = mesRef.split(' ');
+    const mesIdx = monthNames.indexOf(mesPt);
+    const ano = parseInt(anoStr, 10);
+    return new Date(ano, mesIdx, 1);
+  };
+
   const sortedGroups = Object.values(groupedExpenses).sort((a, b) => {
     const now = new Date();
-    const aQuitado = a[0].formaPagamento === "Parcelado" && a.every(it => it.pagoEm && new Date(it.pagoEm) < now);
-    const bQuitado = b[0].formaPagamento === "Parcelado" && b.every(it => it.pagoEm && new Date(it.pagoEm) < now);
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const aQuitadoParcelado = a[0].formaPagamento === "Parcelado" && a.every(it => it.pagoEm && new Date(it.pagoEm) < now);
+    const bQuitadoParcelado = b[0].formaPagamento === "Parcelado" && b.every(it => it.pagoEm && new Date(it.pagoEm) < now);
+    const aQuitadoUnico = a[0].formaPagamento !== "Parcelado" && parseMesReferenciaStart(a[0].mesReferencia) < currentMonthStart;
+    const bQuitadoUnico = b[0].formaPagamento !== "Parcelado" && parseMesReferenciaStart(b[0].mesReferencia) < currentMonthStart;
+    const aQuitado = aQuitadoParcelado || aQuitadoUnico;
+    const bQuitado = bQuitadoParcelado || bQuitadoUnico;
     
     // Quitados vão para o final
     if (aQuitado !== bQuitado) return aQuitado ? 1 : -1;
