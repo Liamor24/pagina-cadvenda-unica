@@ -60,7 +60,8 @@ const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense, onUpdateExpense
   const groupedExpenses = expenses.reduce((acc, expense) => {
     let baseKey: string;
     if (expense.formaPagamento === "Parcelado") {
-      baseKey = `${expense.descricao}::${expense.parcelas ?? 0}::${expense.categoria}::${expense.observacao ?? ''}`;
+      const cleanObs = (expense.observacao || '').replace(/\s*pago_em[:=]\s*\d{4}-\d{2}-\d{2}\s*/g, ' ').trim();
+      baseKey = `${expense.descricao}::${expense.parcelas ?? 0}::${expense.categoria}::${cleanObs}`;
     } else {
       baseKey = expense.id;
     }
