@@ -86,8 +86,16 @@ const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense, onUpdateExpense
   const sortedGroups = Object.values(groupedExpenses).sort((a, b) => {
     const now = new Date();
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const aQuitadoParcelado = a[0].formaPagamento === "Parcelado" && a.every(it => it.pagoEm && new Date(it.pagoEm) < now);
-    const bQuitadoParcelado = b[0].formaPagamento === "Parcelado" && b.every(it => it.pagoEm && new Date(it.pagoEm) < now);
+    
+    // Para despesas parceladas: quitado se todas as parcelas têm pagoEm OU se a data de compra é de meses anteriores
+    const aQuitadoParcelado = a[0].formaPagamento === "Parcelado" && (
+      a.every(it => it.pagoEm && new Date(it.pagoEm) < now) ||
+      parseMesReferenciaStart(a[0].mesReferencia) < currentMonthStart
+    );
+    const bQuitadoParcelado = b[0].formaPagamento === "Parcelado" && (
+      b.every(it => it.pagoEm && new Date(it.pagoEm) < now) ||
+      parseMesReferenciaStart(b[0].mesReferencia) < currentMonthStart
+    );
     const aQuitadoUnico = a[0].formaPagamento !== "Parcelado" && parseMesReferenciaStart(a[0].mesReferencia) < currentMonthStart;
     const bQuitadoUnico = b[0].formaPagamento !== "Parcelado" && parseMesReferenciaStart(b[0].mesReferencia) < currentMonthStart;
     const aQuitado = aQuitadoParcelado || aQuitadoUnico;

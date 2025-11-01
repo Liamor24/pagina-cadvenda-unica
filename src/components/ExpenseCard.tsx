@@ -66,8 +66,13 @@ const ExpenseCard = ({
   };
   const now = new Date();
   const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const isQuitadoParcelado = expense.formaPagamento === "Parcelado" && Array.isArray(installments) && installments.length > 0 &&
-    installments.every(it => it.pagoEm && new Date(it.pagoEm) < now);
+  
+  // Para despesas parceladas: quitado se todas as parcelas têm pagoEm OU se a data de compra é de meses anteriores
+  const isQuitadoParcelado = expense.formaPagamento === "Parcelado" && Array.isArray(installments) && installments.length > 0 && (
+    installments.every(it => it.pagoEm && new Date(it.pagoEm) < now) ||
+    parseMesReferenciaStart(expense.mesReferencia) < currentMonthStart
+  );
+  
   const isQuitadoUnico = expense.formaPagamento !== "Parcelado" && parseMesReferenciaStart(expense.mesReferencia) < currentMonthStart;
   const isQuitado = isQuitadoParcelado || isQuitadoUnico;
 
