@@ -43,15 +43,15 @@ const ExpenseCard = ({
   formatDate,
 }: ExpenseCardProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const hasInstallments = installments && installments.length > 1;
+  const hasInstallments = expense.formaPagamento === "Parcelado" && installments && installments.length > 1;
 
-  // calcular valor total do grupo (se installments representarem parcelas,
-  // somamos os valores; caso seja entrada única, usamos valorTotal)
-  const totalValue = installments && installments.length > 0
-    ? installments.reduce((s, it) => s + it.valorTotal, 0)
+  // Para despesas parceladas, o valor total é sempre o mesmo em todas as parcelas
+  // Para despesas únicas, usamos o valorTotal da própria despesa
+  const totalValue = expense.formaPagamento === "Parcelado" && expense.parcelas && expense.parcelas > 1
+    ? expense.valorTotal * expense.parcelas
     : expense.valorTotal;
 
-  // Pegar valor da parcela baseado no mês de referência da despesa
+  // Pegar valor da parcela atual baseado no mês de referência da despesa
   const currentValue = expense.valorTotal;
 
   // Quitado:
@@ -90,9 +90,9 @@ const ExpenseCard = ({
         isQuitado ? "opacity-75 grayscale" : ""
       }`}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 relative">
         {isQuitado && (
-          <div className="absolute -rotate-12 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-red-500 text-2xl font-bold border-2 border-red-500 rounded px-2 py-1">
+          <div className="absolute -rotate-12 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-red-500 text-2xl font-bold border-2 border-red-500 rounded px-2 py-1 z-10">
             QUITADO
           </div>
         )}
@@ -160,13 +160,8 @@ const ExpenseCard = ({
           </Badge>
           {expense.formaPagamento === "Parcelado" && (
             <span className="text-sm text-muted-foreground">
-              {/* parcelas abertas restantes */}
-              {(() => {
-                if (!Array.isArray(installments)) return `0/${expense.parcelas} parcelas`;
-                const now = new Date();
-                const remaining = installments.filter(it => !it.pagoEm || new Date(it.pagoEm) > now).length;
-                return `${remaining}/${expense.parcelas} parcelas`;
-              })()}
+              {/* Mostrar parcela atual / total de parcelas */}
+              {expense.parcelaAtual || 1}/{expense.parcelas} parcelas
             </span>
           )}
         </div>
