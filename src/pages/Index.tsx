@@ -765,6 +765,51 @@ const Index = () => {
           </div>
         )}
 
+        {/* Resumo Comparativo - só aparece quando um mês específico está selecionado */}
+        {sales.length > 0 && selectedMonth !== "total" && (
+          <div className="max-w-2xl mx-auto mb-8">
+            <div className={`p-6 rounded-xl shadow-lg border-2 transition-all ${
+              totalSales >= totalExpenses 
+                ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-400 dark:border-green-600' 
+                : 'bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/30 border-red-400 dark:border-red-600'
+            }`}>
+              <div className="text-center">
+                <p className={`text-sm font-semibold mb-2 ${
+                  totalSales >= totalExpenses ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
+                }`}>
+                  {totalSales >= totalExpenses ? '✓ Receitas cobrem as despesas' : '⚠ Receitas não cobrem as despesas'}
+                </p>
+                <div className="flex items-center justify-center gap-4">
+                  <div>
+                    <p className="text-xs opacity-75">Diferença</p>
+                    <p className={`text-3xl font-bold ${
+                      totalSales >= totalExpenses ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      R$ {Math.abs(totalSales - totalExpenses).toFixed(2)}
+                    </p>
+                  </div>
+                  {totalSales >= totalExpenses && (
+                    <div className="text-green-600 dark:text-green-400">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    </div>
+                  )}
+                  {totalSales < totalExpenses && (
+                    <div className="text-red-600 dark:text-red-400">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Sales Form */}
         <div className="mb-8">
           <SalesForm 
