@@ -189,9 +189,10 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
       setProducts(newProducts);
       
       if (paymentMethod === "installment" && installments > 0) {
-        const newTotalSaleValue = newProducts.reduce((sum, p) => sum + p.saleValue, 0);
+      const newTotalSaleValue = newProducts.reduce((sum, p) => sum + p.saleValue, 0);
         const advance = parseFloat(advancePayment || "0");
-  const remainingValue = newTotalSaleValue - advance - disc;
+        const disc = parseFloat(discount || "0");
+        const remainingValue = newTotalSaleValue - advance - disc;
         const valuePerInstallment = (remainingValue / installments).toFixed(2);
         
         const newValues = installmentValues.map((val, i) => {
@@ -227,7 +228,8 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
     if (paymentMethod === "installment" && installments > 0 && newProducts.length > 0) {
       const newTotalSaleValue = newProducts.reduce((sum, p) => sum + p.saleValue, 0);
       const advance = parseFloat(advancePayment || "0");
-  const remainingValue = newTotalSaleValue - advance - disc;
+      const disc = parseFloat(discount || "0");
+      const remainingValue = newTotalSaleValue - advance - disc;
       const valuePerInstallment = (remainingValue / installments).toFixed(2);
       
       const newValues = installmentValues.map((val, i) => {

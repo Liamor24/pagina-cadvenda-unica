@@ -1,10 +1,11 @@
 import { APP_CONFIG } from '@/config/constants';
 
 export const formatCurrency = (value: number): string => {
-  return value.toLocaleString(
-    APP_CONFIG.currencyFormat.locale,
-    APP_CONFIG.currencyFormat.options
-  );
+  return value.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2
+  });
 };
 
 export const formatDate = (date: string | Date): string => {

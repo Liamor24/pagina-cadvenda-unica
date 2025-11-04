@@ -68,10 +68,10 @@ const APagar = () => {
             customerName: sale.customer_name,
             purchaseDate: sale.purchase_date,
             paymentDate: sale.payment_date,
-            paymentMethod: sale.payment_method,
+            paymentMethod: sale.payment_method as "pix" | "installment",
             installments: sale.installments,
-            installmentValues: sale.installment_values,
-            installmentDates: sale.installment_dates,
+            installmentValues: Array.isArray(sale.installment_values) ? (sale.installment_values as number[]) : [],
+            installmentDates: Array.isArray(sale.installment_dates) ? (sale.installment_dates as string[]) : [],
             advancePayment: sale.advance_payment,
             discount: sale.discount,
             products: sale.products ? sale.products.map(product => ({
@@ -111,16 +111,15 @@ const APagar = () => {
           const transformedExpenses: Expense[] = expensesData.map(expense => ({
             id: expense.id,
             descricao: expense.descricao,
-            categoria: expense.categoria,
+            categoria: expense.categoria as "Despesa Operacional" | "Embalagens" | "Estoque" | "Fornecedor" | "Outros",
             data: expense.data,
             valorTotal: expense.valor_total,
-            formaPagamento: expense.forma_pagamento,
+            formaPagamento: expense.forma_pagamento as "PIX" | "Parcelado",
             parcelas: expense.parcelas,
             parcelaAtual: expense.parcela_atual,
             mesReferencia: expense.mes_referencia,
             observacao: expense.observacao,
-            // Se a coluna pago_em não existir, tentamos extrair da observacao
-            pagoEm: (typeof expense.pago_em !== 'undefined' ? expense.pago_em : extractPagoEmFromObservation(expense.observacao)) ?? null
+            pagoEm: null
           }));
 
           setExpenses(transformedExpenses);
@@ -138,7 +137,6 @@ const APagar = () => {
     try {
       // Insert expenses and/or installments
       for (const exp of newExpenses) {
-        // Inserir sem depender de pago_em (coluna pode não existir)
         const { data: inserted, error } = await supabase.from('expenses').insert({
           descricao: exp.descricao,
           categoria: exp.categoria,
@@ -153,28 +151,8 @@ const APagar = () => {
 
         if (error) throw error;
 
-        // Update local state with the returned id
         const persisted = { ...exp, id: inserted.id };
         setExpenses(prev => [...prev, persisted]);
-
-        // Se precisar marcar pago, tentar atualizar pago_em; caso falhe, usar observacao
-        if (exp.pagoEm) {
-          try {
-            const { error: updErr } = await supabase
-              .from('expenses')
-              .update({ pago_em: exp.pagoEm })
-              .eq('id', inserted.id);
-            if (updErr) {
-              const mergedObs = mergePagoEmIntoObservation(persisted.observacao, exp.pagoEm);
-              await supabase.from('expenses').update({ observacao: mergedObs }).eq('id', inserted.id);
-              setExpenses(prev => prev.map(e => e.id === inserted.id ? { ...e, observacao: mergedObs } : e));
-            }
-          } catch {
-            const mergedObs = mergePagoEmIntoObservation(persisted.observacao, exp.pagoEm);
-            await supabase.from('expenses').update({ observacao: mergedObs }).eq('id', inserted.id);
-            setExpenses(prev => prev.map(e => e.id === inserted.id ? { ...e, observacao: mergedObs } : e));
-          }
-        }
       }
     } catch (err) {
       console.error('Error inserting expenses to Supabase:', err);
@@ -194,7 +172,6 @@ const APagar = () => {
         parcela_atual: updatedExpense.parcelaAtual ?? null,
         mes_referencia: updatedExpense.mesReferencia,
         observacao: updatedExpense.observacao ?? null,
-        pago_em: updatedExpense.pagoEm ?? null,
       }).eq('id', updatedExpense.id);
 
       if (error) throw error;
@@ -202,28 +179,8 @@ const APagar = () => {
       setEditingExpense(null);
     } catch (err) {
       console.error('Error updating expense in Supabase:', err);
-      // Fallback: tentar persistir pagoEm dentro de observacao
-      try {
-        const mergedObs = mergePagoEmIntoObservation(updatedExpense.observacao, updatedExpense.pagoEm ?? null);
-        await supabase.from('expenses').update({
-          descricao: updatedExpense.descricao,
-          categoria: updatedExpense.categoria,
-          data: updatedExpense.data,
-          valor_total: updatedExpense.valorTotal,
-          forma_pagamento: updatedExpense.formaPagamento,
-          parcelas: updatedExpense.parcelas ?? null,
-          parcela_atual: updatedExpense.parcelaAtual ?? null,
-          mes_referencia: updatedExpense.mesReferencia,
-          observacao: mergedObs,
-        }).eq('id', updatedExpense.id);
-        const patched = { ...updatedExpense, observacao: mergedObs };
-        setExpenses(expenses.map(exp => exp.id === updatedExpense.id ? patched : exp));
-      } catch (err2) {
-        console.warn('Fallback update failed, applying local state only.', err2);
-        setExpenses(expenses.map(exp => exp.id === updatedExpense.id ? updatedExpense : exp));
-      } finally {
-        setEditingExpense(null);
-      }
+      setExpenses(expenses.map(exp => exp.id === updatedExpense.id ? updatedExpense : exp));
+      setEditingExpense(null);
     }
   };
 
@@ -240,30 +197,14 @@ const APagar = () => {
       if (patch.parcelaAtual !== undefined) updatePayload.parcela_atual = patch.parcelaAtual;
       if (patch.mesReferencia !== undefined) updatePayload.mes_referencia = patch.mesReferencia;
       if (patch.observacao !== undefined) updatePayload.observacao = patch.observacao;
-      if (patch.pagoEm !== undefined) updatePayload.pago_em = patch.pagoEm; // pode não existir na base
 
       const { error } = await supabase.from('expenses').update(updatePayload).eq('id', patch.id);
       if (error) throw error;
 
       setExpenses(prev => prev.map(e => e.id === patch.id ? { ...e, ...patch } : e));
     } catch (err: any) {
-      console.warn('Falha ao atualizar despesa no Supabase. Tentando persistir via observacao.', err?.message || err);
-      try {
-        if (patch.pagoEm !== undefined) {
-          // Persistir pagoEm dentro de observacao como marcador
-          const current = expenses.find(e => e.id === patch.id);
-          const mergedObs = mergePagoEmIntoObservation(current?.observacao, patch.pagoEm);
-          await supabase.from('expenses').update({ observacao: mergedObs }).eq('id', patch.id);
-          const patchWithObs = { ...patch, observacao: mergedObs };
-          setExpenses(prev => prev.map(e => e.id === patch.id ? { ...e, ...patchWithObs } : e));
-        } else {
-          // sem pagoEm, aplica local
-          setExpenses(prev => prev.map(e => e.id === patch.id ? { ...e, ...patch } : e));
-        }
-      } catch (err2) {
-        console.warn('Fallback observacao update failed, aplicando local somente.', err2);
-        setExpenses(prev => prev.map(e => e.id === patch.id ? { ...e, ...patch } : e));
-      }
+      console.warn('Falha ao atualizar despesa no Supabase.', err?.message || err);
+      setExpenses(prev => prev.map(e => e.id === patch.id ? { ...e, ...patch } : e));
     }
   };
   const handleEditExpense = (expense: Expense) => {
@@ -413,7 +354,7 @@ const APagar = () => {
         </div>
 
         {/* Cards de Resumo */}
-        <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto mb-8">
+        <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto mb-6">
           <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 p-4 rounded-xl shadow-lg border border-blue-100 dark:border-blue-800/30 text-center group hover:scale-105 transition-transform">
             <p className="text-blue-600 dark:text-blue-300 mb-1 group-hover:text-blue-700 transition-colors font-bold text-lg">
               Total a receber<br />
@@ -434,6 +375,41 @@ const APagar = () => {
             </p>
           </div>
         </div>
+
+        {/* Resumo Comparativo - só aparece quando um mês está selecionado */}
+        {selectedMonth !== "TODOS" && (
+          <div className="max-w-2xl mx-auto mb-8">
+            <div className={`p-6 rounded-xl shadow-lg border-2 transition-all ${
+              totalVendas >= totalMes 
+                ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-400 dark:border-green-600' 
+                : 'bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/30 border-red-400 dark:border-red-600'
+            }`}>
+              <div className="text-center">
+                <p className={`text-sm font-semibold mb-2 ${
+                  totalVendas >= totalMes ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
+                }`}>
+                  {totalVendas >= totalMes ? '✓ Receitas cobrem as despesas' : '⚠ Receitas não cobrem as despesas'}
+                </p>
+                <div className="flex items-center justify-center gap-4">
+                  <div>
+                    <p className="text-xs opacity-75">Diferença</p>
+                    <p className={`text-3xl font-bold ${
+                      totalVendas >= totalMes ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                    }`}>
+                      R$ {Math.abs(totalVendas - totalMes).toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="text-xs opacity-75">
+                    <div>{totalVendas >= totalMes ? 'de saldo positivo' : 'de déficit'}</div>
+                    <div className="mt-1 font-semibold">
+                      {totalVendas > 0 ? `(${((totalVendas - totalMes) / totalVendas * 100).toFixed(1)}%)` : ''}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Formulário */}
         <div className="mb-8 max-w-[70%] mx-auto">
