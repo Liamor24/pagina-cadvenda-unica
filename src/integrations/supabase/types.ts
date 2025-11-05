@@ -21,6 +21,7 @@ export type Database = {
           data: string
           descricao: string
           forma_pagamento: string
+          grupo_id: string | null
           id: string
           mes_referencia: string
           observacao: string | null
@@ -35,6 +36,7 @@ export type Database = {
           data: string
           descricao: string
           forma_pagamento: string
+          grupo_id?: string | null
           id?: string
           mes_referencia: string
           observacao?: string | null
@@ -49,6 +51,7 @@ export type Database = {
           data?: string
           descricao?: string
           forma_pagamento?: string
+          grupo_id?: string | null
           id?: string
           mes_referencia?: string
           observacao?: string | null
@@ -102,7 +105,6 @@ export type Database = {
           advance_payment: number | null
           created_at: string
           customer_name: string
-          discount: number | null
           id: string
           installment_dates: Json | null
           installment_values: Json | null
@@ -116,7 +118,6 @@ export type Database = {
           advance_payment?: number | null
           created_at?: string
           customer_name: string
-          discount?: number | null
           id?: string
           installment_dates?: Json | null
           installment_values?: Json | null
@@ -130,7 +131,6 @@ export type Database = {
           advance_payment?: number | null
           created_at?: string
           customer_name?: string
-          discount?: number | null
           id?: string
           installment_dates?: Json | null
           installment_values?: Json | null

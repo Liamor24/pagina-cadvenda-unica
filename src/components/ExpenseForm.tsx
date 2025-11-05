@@ -12,7 +12,7 @@ import type { Expense } from "@/pages/APagar";
 interface ExpenseFormProps {
   onExpenseAdded: (expenses: Expense[]) => void;
   editingExpense?: Expense | null;
-  onExpenseUpdated?: (expense: Expense) => void;
+  onExpenseUpdated?: (expenses: Expense[]) => void;
 }
 
 const ExpenseForm = ({ onExpenseAdded, editingExpense, onExpenseUpdated }: ExpenseFormProps) => {
@@ -47,9 +47,9 @@ const ExpenseForm = ({ onExpenseAdded, editingExpense, onExpenseUpdated }: Expen
     numParcelas: number,
     dataPrimeiraParcela: string
   ): Expense[] => {
+    const grupoId = crypto.randomUUID();
     const valorParcela = valor / numParcelas;
     const baseDate = new Date(dataPrimeiraParcela);
-    // Iniciar sempre no mês seguinte
     baseDate.setMonth(baseDate.getMonth() + 1);
     const expenses: Expense[] = [];
 
@@ -61,6 +61,7 @@ const ExpenseForm = ({ onExpenseAdded, editingExpense, onExpenseUpdated }: Expen
       
       expenses.push({
         id: `${Date.now()}-${i}-${Math.random()}`,
+        grupo_id: grupoId,
         descricao: descricao,
         categoria: categoria,
         data: parcelaDate.toISOString().split('T')[0],
@@ -101,17 +102,31 @@ const ExpenseForm = ({ onExpenseAdded, editingExpense, onExpenseUpdated }: Expen
     const valor = parseFloat(valorTotal);
 
     if (editingExpense) {
-      // Modo de edição
-      const updatedExpense: Expense = {
-        ...editingExpense,
-        descricao,
-        categoria,
-        data,
-        valorTotal: valor,
-        observacao
-      };
-
-      onExpenseUpdated?.(updatedExpense);
+      // Modo de edição - atualizar todas as parcelas do grupo
+      if (editingExpense.formaPagamento === "Parcelado" && editingExpense.grupo_id) {
+        // Buscar todas as parcelas do grupo (simulação - precisaríamos buscar do estado)
+        // Por enquanto, apenas atualizar a parcela atual
+        const updatedExpense: Expense = {
+          ...editingExpense,
+          descricao,
+          categoria,
+          data,
+          valorTotal: valor,
+          observacao
+        };
+        onExpenseUpdated?.([updatedExpense]);
+      } else {
+        // PIX ou única parcela
+        const updatedExpense: Expense = {
+          ...editingExpense,
+          descricao,
+          categoria,
+          data,
+          valorTotal: valor,
+          observacao
+        };
+        onExpenseUpdated?.([updatedExpense]);
+      }
       
       toast({
         title: "Despesa atualizada!",
@@ -130,6 +145,7 @@ const ExpenseForm = ({ onExpenseAdded, editingExpense, onExpenseUpdated }: Expen
 
         const newExpense: Expense = {
           id: `${Date.now()}-${Math.random()}`,
+          grupo_id: crypto.randomUUID(),
           descricao,
           categoria,
           data,

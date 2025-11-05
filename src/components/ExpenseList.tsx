@@ -24,11 +24,10 @@ import ExpenseCard from "./ExpenseCard";
 interface ExpenseListProps {
   expenses: Expense[];
   onEditExpense: (expense: Expense) => void;
-  onDeleteExpense: (expenseId: string) => void;
-  onUpdateExpense?: (expense: Partial<Expense> & { id: string }) => void | Promise<void>;
+  onDeleteExpense: (grupoId: string) => void;
 }
 
-const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense, onUpdateExpense }: ExpenseListProps) => {
+const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: ExpenseListProps) => {
   const getCategoryBadge = (categoria: Expense["categoria"]) => {
     const variants: Record<Expense["categoria"], { variant: "default" | "secondary" | "outline", className: string }> = {
       "Estoque": { variant: "default", className: "bg-blue-500 hover:bg-blue-600" },
@@ -54,64 +53,16 @@ const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense, onUpdateExpense
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  // Agrupar despesas por compra. Para entradas parceladas (cada parcela é uma entrada
-  // separada) agrupamos por descrição + número de parcelas + categoria + observação
-  // para reconstruir a compra original em um único card.
+  // Agrupar despesas por grupo_id
   const groupedExpenses = expenses.reduce((acc, expense) => {
-    let baseKey: string;
-    if (expense.formaPagamento === "Parcelado") {
-      // Agrupar por descrição + número de parcelas somente, para não quebrar agrupamento após edições
-      baseKey = `${expense.descricao}::${expense.parcelas ?? 0}`;
-    } else {
-      baseKey = expense.id;
-    }
-
-    if (!acc[baseKey]) acc[baseKey] = [];
-    acc[baseKey].push(expense);
+    const groupKey = expense.grupo_id || expense.id;
+    if (!acc[groupKey]) acc[groupKey] = [];
+    acc[groupKey].push(expense);
     return acc;
   }, {} as Record<string, Expense[]>);
 
-  // Ordenar grupos por:
-  // 1. Quitado (não quitados primeiro) — quitado somente quando todas parcelas do grupo têm pagoEm preenchido e já no passado
-  // 2. Parcelas restantes (mais parcelas abertas primeiro)
-  // 3. Data mais recente
-  const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-  const parseMesReferenciaStart = (mesRef: string): Date => {
-    const [mesPt, anoStr] = mesRef.split(' ');
-    const mesIdx = monthNames.indexOf(mesPt);
-    const ano = parseInt(anoStr, 10);
-    return new Date(ano, mesIdx, 1);
-  };
-
+  // Ordenar grupos por data mais recente
   const sortedGroups = Object.values(groupedExpenses).sort((a, b) => {
-    const now = new Date();
-    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    
-    // Para despesas parceladas: quitado se todas as parcelas têm pagoEm OU se a data de compra é de meses anteriores
-    const aQuitadoParcelado = a[0].formaPagamento === "Parcelado" && (
-      a.every(it => it.pagoEm && new Date(it.pagoEm) < now) ||
-      parseMesReferenciaStart(a[0].mesReferencia) < currentMonthStart
-    );
-    const bQuitadoParcelado = b[0].formaPagamento === "Parcelado" && (
-      b.every(it => it.pagoEm && new Date(it.pagoEm) < now) ||
-      parseMesReferenciaStart(b[0].mesReferencia) < currentMonthStart
-    );
-    const aQuitadoUnico = a[0].formaPagamento !== "Parcelado" && parseMesReferenciaStart(a[0].mesReferencia) < currentMonthStart;
-    const bQuitadoUnico = b[0].formaPagamento !== "Parcelado" && parseMesReferenciaStart(b[0].mesReferencia) < currentMonthStart;
-    const aQuitado = aQuitadoParcelado || aQuitadoUnico;
-    const bQuitado = bQuitadoParcelado || bQuitadoUnico;
-    
-    // Quitados vão para o final
-    if (aQuitado !== bQuitado) return aQuitado ? 1 : -1;
-
-    // Se ambos são parcelados, compara parcelas restantes (não pagas ou com pagoEm futuro)
-    if (a[0].formaPagamento === "Parcelado" && b[0].formaPagamento === "Parcelado") {
-      const aRestantes = a.filter(it => !it.pagoEm || new Date(it.pagoEm) > now).length;
-      const bRestantes = b.filter(it => !it.pagoEm || new Date(it.pagoEm) > now).length;
-      if (aRestantes !== bRestantes) return bRestantes - aRestantes;
-    }
-
-    // Por fim, ordena por data mais recente
     const maxA = Math.max(...a.map(x => new Date(x.data).getTime()));
     const maxB = Math.max(...b.map(x => new Date(x.data).getTime()));
     return maxB - maxA;
@@ -140,7 +91,6 @@ const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense, onUpdateExpense
             installments={hasInstallments ? group : undefined}
             onEdit={onEditExpense}
             onDelete={onDeleteExpense}
-            onUpdate={onUpdateExpense}
             getCategoryBadge={getCategoryBadge}
             formatCurrency={formatCurrency}
             formatDate={formatDate}

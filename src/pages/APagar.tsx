@@ -4,6 +4,7 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 import type { Sale } from "@/components/SalesForm";
 import { Input } from "@/components/ui/input";
 import ExpenseForm from "@/components/ExpenseForm";
@@ -12,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import logo from "@/assets/ellas-logo.jpeg";
 export interface Expense {
   id: string;
+  grupo_id?: string;
   descricao: string;
   categoria: "Estoque" | "Embalagens" | "Fornecedor" | "Despesa Operacional" | "Outros";
   data: string;
@@ -21,23 +23,7 @@ export interface Expense {
   parcelaAtual?: number;
   mesReferencia: string;
   observacao?: string;
-  pagoEm?: string | null;
 }
-// Helpers para fallback quando a coluna pago_em não existe no banco
-const extractPagoEmFromObservation = (obs?: string | null): string | null => {
-  if (!obs) return null;
-  const m = obs.match(/pago_em[:=]\s*(\d{4}-\d{2}-\d{2})/);
-  return m ? m[1] : null;
-};
-
-const mergePagoEmIntoObservation = (existing: string | null | undefined, pagoEm: string | null | undefined): string | null => {
-  const base = existing || "";
-  // remove marcador antigo se existir
-  const cleaned = base.replace(/\s*pago_em[:=]\s*\d{4}-\d{2}-\d{2}\s*/g, " ").trim();
-  if (!pagoEm) return cleaned.length ? cleaned : null;
-  const marker = `pago_em=${pagoEm}`;
-  return cleaned ? `${cleaned} ${marker}` : marker;
-};
 const APagar = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("TODOS");
@@ -73,7 +59,7 @@ const APagar = () => {
             installmentValues: Array.isArray(sale.installment_values) ? (sale.installment_values as number[]) : [],
             installmentDates: Array.isArray(sale.installment_dates) ? (sale.installment_dates as string[]) : [],
             advancePayment: sale.advance_payment,
-            discount: sale.discount,
+            discount: 0,
             products: sale.products ? sale.products.map(product => ({
               id: product.id,
               productRef: product.product_ref,
@@ -110,6 +96,7 @@ const APagar = () => {
         if (expensesData && expensesData.length > 0) {
           const transformedExpenses: Expense[] = expensesData.map(expense => ({
             id: expense.id,
+            grupo_id: expense.grupo_id,
             descricao: expense.descricao,
             categoria: expense.categoria as "Despesa Operacional" | "Embalagens" | "Estoque" | "Fornecedor" | "Outros",
             data: expense.data,
@@ -119,7 +106,6 @@ const APagar = () => {
             parcelaAtual: expense.parcela_atual,
             mesReferencia: expense.mes_referencia,
             observacao: expense.observacao,
-            pagoEm: null
           }));
 
           setExpenses(transformedExpenses);
@@ -132,10 +118,8 @@ const APagar = () => {
     fetchExpenses();
   }, []);
 
-  // Removed localStorage persistence since we're using Supabase now
   const handleExpenseAdded = async (newExpenses: Expense[]) => {
     try {
-      // Insert expenses and/or installments
       for (const exp of newExpenses) {
         const { data: inserted, error } = await supabase.from('expenses').insert({
           descricao: exp.descricao,
@@ -147,6 +131,7 @@ const APagar = () => {
           parcela_atual: exp.parcelaAtual ?? null,
           mes_referencia: exp.mesReferencia,
           observacao: exp.observacao ?? null,
+          grupo_id: exp.grupo_id,
         }).select('id').single();
 
         if (error) throw error;
@@ -156,57 +141,36 @@ const APagar = () => {
       }
     } catch (err) {
       console.error('Error inserting expenses to Supabase:', err);
-      // fallback local
       setExpenses(prev => [...prev, ...newExpenses]);
     }
   };
-  const handleExpenseUpdated = async (updatedExpense: Expense) => {
+  const handleExpenseUpdated = async (updatedExpenses: Expense[]) => {
     try {
-      const { error } = await supabase.from('expenses').update({
-        descricao: updatedExpense.descricao,
-        categoria: updatedExpense.categoria,
-        data: updatedExpense.data,
-        valor_total: updatedExpense.valorTotal,
-        forma_pagamento: updatedExpense.formaPagamento,
-        parcelas: updatedExpense.parcelas ?? null,
-        parcela_atual: updatedExpense.parcelaAtual ?? null,
-        mes_referencia: updatedExpense.mesReferencia,
-        observacao: updatedExpense.observacao ?? null,
-      }).eq('id', updatedExpense.id);
-
-      if (error) throw error;
-      setExpenses(expenses.map(exp => exp.id === updatedExpense.id ? updatedExpense : exp));
+      for (const exp of updatedExpenses) {
+        const { error } = await supabase
+          .from('expenses')
+          .update({
+            descricao: exp.descricao,
+            categoria: exp.categoria,
+            data: exp.data,
+            valor_total: exp.valorTotal,
+            observacao: exp.observacao ?? null,
+          })
+          .eq('id', exp.id);
+        
+        if (error) throw error;
+      }
+      
+      setExpenses(prev => prev.map(exp => {
+        const updated = updatedExpenses.find(u => u.id === exp.id);
+        return updated || exp;
+      }));
       setEditingExpense(null);
     } catch (err) {
       console.error('Error updating expense in Supabase:', err);
-      setExpenses(expenses.map(exp => exp.id === updatedExpense.id ? updatedExpense : exp));
-      setEditingExpense(null);
     }
   };
 
-  // Atualização parcial (ex.: marcar parcela como paga/reverter)
-  const handleUpdateExpensePartial = async (patch: Partial<Expense> & { id: string }) => {
-    try {
-      const updatePayload: Record<string, any> = {};
-      if (patch.descricao !== undefined) updatePayload.descricao = patch.descricao;
-      if (patch.categoria !== undefined) updatePayload.categoria = patch.categoria;
-      if (patch.data !== undefined) updatePayload.data = patch.data;
-      if (patch.valorTotal !== undefined) updatePayload.valor_total = patch.valorTotal;
-      if (patch.formaPagamento !== undefined) updatePayload.forma_pagamento = patch.formaPagamento;
-      if (patch.parcelas !== undefined) updatePayload.parcelas = patch.parcelas;
-      if (patch.parcelaAtual !== undefined) updatePayload.parcela_atual = patch.parcelaAtual;
-      if (patch.mesReferencia !== undefined) updatePayload.mes_referencia = patch.mesReferencia;
-      if (patch.observacao !== undefined) updatePayload.observacao = patch.observacao;
-
-      const { error } = await supabase.from('expenses').update(updatePayload).eq('id', patch.id);
-      if (error) throw error;
-
-      setExpenses(prev => prev.map(e => e.id === patch.id ? { ...e, ...patch } : e));
-    } catch (err: any) {
-      console.warn('Falha ao atualizar despesa no Supabase.', err?.message || err);
-      setExpenses(prev => prev.map(e => e.id === patch.id ? { ...e, ...patch } : e));
-    }
-  };
   const handleEditExpense = (expense: Expense) => {
     setEditingExpense(expense);
     window.scrollTo({
@@ -214,16 +178,28 @@ const APagar = () => {
       behavior: 'smooth'
     });
   };
-  const handleDeleteExpense = async (expenseId: string) => {
+  const handleDeleteExpense = async (grupoId: string) => {
     try {
-      const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('grupo_id', grupoId);
+      
       if (error) throw error;
       
-      // Update local state
-      setExpenses(expenses.filter(exp => exp.id !== expenseId));
+      setExpenses(expenses.filter(exp => exp.grupo_id !== grupoId));
+      
+      toast({
+        title: "Despesa excluída!",
+        description: "Todas as parcelas foram removidas com sucesso."
+      });
     } catch (err) {
-      console.error('Error deleting expense from Supabase:', err);
-      setExpenses(expenses.filter(exp => exp.id !== expenseId));
+      console.error('Error deleting expense group from Supabase:', err);
+      toast({
+        title: "Erro ao excluir",
+        description: "Ocorreu um erro ao excluir a despesa.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -247,13 +223,7 @@ const APagar = () => {
   });
 
   // Cálculos de resumo
-  // Excluir do total do mês parcelas que foram pagas ANTES do mês de vencimento (mesReferencia)
-  const totalMes = filteredExpenses.reduce((sum, e) => {
-    const vencimentoInicio = parseMesReferenciaStart(e.mesReferencia);
-    const pagoEmDate = e.pagoEm ? new Date(e.pagoEm) : null;
-    const pagoAntesDoMes = !!(pagoEmDate && pagoEmDate < vencimentoInicio);
-    return pagoAntesDoMes ? sum : sum + e.valorTotal;
-  }, 0);
+  const totalMes = filteredExpenses.reduce((sum, e) => sum + e.valorTotal, 0);
   const totalGeral = expenses.reduce((sum, e) => sum + e.valorTotal, 0);
 
   // Calcular total de vendas para o mês selecionado
@@ -417,7 +387,7 @@ const APagar = () => {
         </div>
 
         {/* Lista de Despesas */}
-        <ExpenseList expenses={filteredExpenses} onEditExpense={handleEditExpense} onDeleteExpense={handleDeleteExpense} onUpdateExpense={handleUpdateExpensePartial} />
+        <ExpenseList expenses={filteredExpenses} onEditExpense={handleEditExpense} onDeleteExpense={handleDeleteExpense} />
       </main>
     </div>;
 };

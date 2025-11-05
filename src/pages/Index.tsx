@@ -50,7 +50,7 @@ const Index = () => {
             installmentValues: Array.isArray(sale.installment_values) ? (sale.installment_values as number[]) : [],
             installmentDates: Array.isArray(sale.installment_dates) ? (sale.installment_dates as string[]) : [],
             advancePayment: sale.advance_payment,
-            discount: sale.discount,
+            discount: 0,
             products: sale.products ? sale.products.map(product => ({
               id: product.id,
               productRef: product.product_ref,
@@ -144,7 +144,7 @@ const Index = () => {
             installmentValues: Array.isArray(data.installment_values) ? (data.installment_values as number[]) : [],
             installmentDates: Array.isArray(data.installment_dates) ? (data.installment_dates as string[]) : [],
             advancePayment: data.advance_payment,
-            discount: data.discount,
+            discount: 0,
             products: data.products ? data.products.map((product: any) => ({
               id: product.id,
               productRef: product.product_ref,
@@ -187,7 +187,7 @@ const Index = () => {
             installmentValues: Array.isArray(data.installment_values) ? (data.installment_values as number[]) : [],
             installmentDates: Array.isArray(data.installment_dates) ? (data.installment_dates as string[]) : [],
             advancePayment: data.advance_payment,
-            discount: data.discount,
+            discount: 0,
             products: data.products ? data.products.map((product: any) => ({
               id: product.id,
               productRef: product.product_ref,
@@ -240,7 +240,7 @@ const Index = () => {
         installment_values: sale.installmentValues,
         installment_dates: sale.installmentDates,
         advance_payment: sale.advancePayment,
-        discount: sale.discount,
+        discount: sale.discount ?? 0,
       }).select().single();
 
       if (saleError) {

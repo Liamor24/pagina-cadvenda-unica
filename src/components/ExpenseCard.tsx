@@ -25,8 +25,7 @@ interface ExpenseCardProps {
   expense: Expense;
   installments?: Expense[];
   onEdit: (expense: Expense) => void;
-  onDelete: (expenseId: string) => void;
-  onUpdate?: (expense: Partial<Expense> & { id: string }) => void | Promise<void>;
+  onDelete: (grupoId: string) => void;
   getCategoryBadge: (categoria: Expense["categoria"]) => JSX.Element;
   formatCurrency: (value: number) => string;
   formatDate: (dateString: string) => string;
@@ -37,7 +36,6 @@ const ExpenseCard = ({
   installments,
   onEdit,
   onDelete,
-  onUpdate,
   getCategoryBadge,
   formatCurrency,
   formatDate,
@@ -54,27 +52,8 @@ const ExpenseCard = ({
   // Pegar valor da parcela atual baseado no mês de referência da despesa
   const currentValue = expense.valorTotal;
 
-  // Quitado:
-  // - Parcelado: todas as parcelas com pagoEm no passado
-  // - Único (PIX/1 parcela): mês de referência anterior ao mês atual
-  const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-  const parseMesReferenciaStart = (mesRef: string): Date => {
-    const [mesPt, anoStr] = mesRef.split(' ');
-    const mesIdx = monthNames.indexOf(mesPt);
-    const ano = parseInt(anoStr, 10);
-    return new Date(ano, mesIdx, 1);
-  };
-  const now = new Date();
-  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  
-  // Para despesas parceladas: quitado se todas as parcelas têm pagoEm OU se a data de compra é de meses anteriores
-  const isQuitadoParcelado = expense.formaPagamento === "Parcelado" && Array.isArray(installments) && installments.length > 0 && (
-    installments.every(it => it.pagoEm && new Date(it.pagoEm) < now) ||
-    parseMesReferenciaStart(expense.mesReferencia) < currentMonthStart
-  );
-  
-  const isQuitadoUnico = expense.formaPagamento !== "Parcelado" && parseMesReferenciaStart(expense.mesReferencia) < currentMonthStart;
-  const isQuitado = isQuitadoParcelado || isQuitadoUnico;
+  // Remover lógica de quitado temporariamente
+  const isQuitado = false;
 
   // Data de compra: se parcelado, usar a menor data das parcelas; caso contrário, usar a própria data
   const purchaseDateStr = (() => {
@@ -141,16 +120,19 @@ const ExpenseCard = ({
                   <AlertDialogDescription>
                     Tem certeza que deseja excluir esta despesa?
                     {expense.formaPagamento === "Parcelado" && (
-                      <span className="block mt-2 font-semibold text-foreground">
-                        Atenção: Apenas esta parcela ({expense.parcelaAtual}/{expense.parcelas}) será excluída.
+                      <span className="block mt-2 font-semibold text-destructive">
+                        ⚠️ ATENÇÃO: Todas as {expense.parcelas} parcelas desta compra serão excluídas permanentemente.
                       </span>
                     )}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => onDelete(expense.id)}>
-                    Confirmar
+                  <AlertDialogAction 
+                    onClick={() => onDelete(expense.grupo_id || expense.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Excluir
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -208,71 +190,8 @@ const ExpenseCard = ({
                           <p className="font-medium text-sm">Parcela {installment.parcelaAtual}/{installment.parcelas}</p>
                           <p className="text-xs text-muted-foreground">{installment.mesReferencia}</p>
                         </div>
-                        <div className="text-right flex items-center gap-2">
+                        <div className="text-right">
                           <p className="font-semibold">{formatCurrency(installment.valorTotal)}</p>
-                          {(() => {
-                            const isPaid = installment.pagoEm && new Date(installment.pagoEm) < new Date();
-                            return isPaid ? (
-                              <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-600">Pago</Badge>
-                            ) : null;
-                          })()}
-                          <div className="flex items-center gap-2 ml-3">
-                            {/* Marcar como Pago */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={async () => {
-                                if (typeof onUpdate === 'function') {
-                                  await onUpdate({ id: installment.id, pagoEm: new Date().toISOString().split('T')[0] });
-                                }
-                              }}
-                              title="Marcar como Pago"
-                            >
-                              {/* reutilizando check via ícone Pencil se não houver ícone específico */}
-                              <Badge className="hidden" />
-                              <span className="text-xs">Pagar</span>
-                            </Button>
-
-                            {/* Reverter pagamento */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={async () => {
-                                if (typeof onUpdate === 'function') {
-                                  await onUpdate({ id: installment.id, pagoEm: null });
-                                }
-                              }}
-                              title="Reverter pagamento"
-                            >
-                              <span className="text-xs">Reverter</span>
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="flex gap-1 ml-3">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(installment)}>
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <Trash2 className="h-3 w-3 text-destructive" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja excluir a parcela {installment.parcelaAtual}/{installment.parcelas}?
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => onDelete(installment.id)}>
-                                  Confirmar
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
                         </div>
                       </div>
                     ))}
