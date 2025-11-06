@@ -240,7 +240,6 @@ const Index = () => {
         installment_values: sale.installmentValues,
         installment_dates: sale.installmentDates,
         advance_payment: sale.advancePayment,
-        discount: sale.discount ?? 0,
       }).select().single();
 
       if (saleError) {
