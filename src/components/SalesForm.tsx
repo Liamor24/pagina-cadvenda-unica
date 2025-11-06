@@ -274,12 +274,6 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
       return;
     }
 
-    // Mostrar feedback de salvamento em andamento
-    toast({
-      title: "Salvando dados...",
-      description: "Aguarde enquanto os dados são salvos no banco de dados.",
-    });
-
     const saleData: Sale = {
       id: editingSale?.id || Date.now().toString(),
       customerName,
@@ -321,11 +315,6 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
       setDiscount("");
       setProducts([]);
       setEditingProductId(null);
-
-      toast({
-        title: editingSale ? "Venda atualizada!" : "Venda registrada!",
-        description: editingSale ? "A venda foi atualizada com sucesso no banco de dados." : "A venda foi adicionada com sucesso ao banco de dados.",
-      });
     } catch (error) {
       console.error('Erro ao salvar venda:', error);
       toast({

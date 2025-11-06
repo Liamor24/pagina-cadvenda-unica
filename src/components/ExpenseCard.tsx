@@ -24,6 +24,7 @@ import { useState } from "react";
 interface ExpenseCardProps {
   expense: Expense;
   installments?: Expense[];
+  isPaid?: boolean;
   onEdit: (expense: Expense) => void;
   onDelete: (grupoId: string) => void;
   getCategoryBadge: (categoria: Expense["categoria"]) => JSX.Element;
@@ -34,6 +35,7 @@ interface ExpenseCardProps {
 const ExpenseCard = ({
   expense,
   installments,
+  isPaid = false,
   onEdit,
   onDelete,
   getCategoryBadge,
@@ -52,8 +54,7 @@ const ExpenseCard = ({
   // Pegar valor da parcela atual baseado no mês de referência da despesa
   const currentValue = expense.valorTotal;
 
-  // Remover lógica de quitado temporariamente
-  const isQuitado = false;
+  const isQuitado = isPaid;
 
   // Data de compra: se parcelado, usar a menor data das parcelas; caso contrário, usar a própria data
   const purchaseDateStr = (() => {

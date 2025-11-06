@@ -53,6 +53,21 @@ const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: ExpenseListPr
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
+  // Helper para verificar se todas as parcelas estão quitadas
+  const isExpenseGroupPaid = (group: Expense[]): boolean => {
+    if (group.length === 0) return false;
+    if (group[0].formaPagamento === "PIX") return false;
+    
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    
+    return group.every(exp => {
+      const expDate = new Date(exp.data);
+      expDate.setHours(0, 0, 0, 0);
+      return expDate < now;
+    });
+  };
+
   // Agrupar despesas por grupo_id
   const groupedExpenses = expenses.reduce((acc, expense) => {
     const groupKey = expense.grupo_id || expense.id;
@@ -61,8 +76,17 @@ const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: ExpenseListPr
     return acc;
   }, {} as Record<string, Expense[]>);
 
-  // Ordenar grupos por data mais recente
+  // Ordenar grupos: não quitadas primeiro, depois por data mais recente
   const sortedGroups = Object.values(groupedExpenses).sort((a, b) => {
+    const isPaidA = isExpenseGroupPaid(a);
+    const isPaidB = isExpenseGroupPaid(b);
+    
+    // Não quitadas primeiro
+    if (isPaidA !== isPaidB) {
+      return isPaidA ? 1 : -1;
+    }
+    
+    // Depois ordena por data mais recente
     const maxA = Math.max(...a.map(x => new Date(x.data).getTime()));
     const maxB = Math.max(...b.map(x => new Date(x.data).getTime()));
     return maxB - maxA;
@@ -83,12 +107,14 @@ const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: ExpenseListPr
       {sortedGroups.map((group) => {
         const mainExpense = group[0];
         const hasInstallments = group.length > 1;
+        const isPaid = isExpenseGroupPaid(group);
         
         return (
           <ExpenseCard
             key={mainExpense.id}
             expense={mainExpense}
             installments={hasInstallments ? group : undefined}
+            isPaid={isPaid}
             onEdit={onEditExpense}
             onDelete={onDeleteExpense}
             getCategoryBadge={getCategoryBadge}
