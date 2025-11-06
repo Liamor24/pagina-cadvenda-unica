@@ -203,8 +203,16 @@ const APagar = () => {
     }
   };
 
-  // Filtrar despesas por mês
-  const filteredExpenses = selectedMonth === "TODOS" ? expenses : expenses.filter(e => e.mesReferencia === selectedMonth);
+  // Filtrar despesas por mês e termo de busca
+  const filteredExpenses = expenses
+    .filter(e => selectedMonth === "TODOS" || e.mesReferencia === selectedMonth)
+    .filter(e => {
+      if (!searchTerm) return true;
+      const searchLower = searchTerm.toLowerCase();
+      const descricaoMatch = e.descricao.toLowerCase().includes(searchLower);
+      const valorMatch = e.valorTotal.toString().includes(searchTerm);
+      return descricaoMatch || valorMatch;
+    });
 
   // Calcular meses disponíveis
   const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
