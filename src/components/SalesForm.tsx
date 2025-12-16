@@ -24,6 +24,7 @@ export interface Sale {
   installments?: number;
   installmentValues?: number[];
   installmentDates?: string[];
+  installmentType?: "mensal" | "quinzenal";
   advancePayment?: number;
   discount?: number;
   products: Product[];
@@ -44,13 +45,23 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
     return date.toISOString().split('T')[0];
   };
 
-  const calculateInstallmentDates = (firstPaymentDate: string, numberOfInstallments: number): string[] => {
+  const calculateInstallmentDates = (
+    firstPaymentDate: string, 
+    numberOfInstallments: number,
+    type: "mensal" | "quinzenal" = "mensal"
+  ): string[] => {
     const dates: string[] = [];
     const baseDate = new Date(firstPaymentDate);
     
     for (let i = 0; i < numberOfInstallments; i++) {
       const installmentDate = new Date(baseDate);
-      installmentDate.setMonth(baseDate.getMonth() + i);
+      if (type === "quinzenal") {
+        // Adiciona 15 dias por parcela
+        installmentDate.setDate(baseDate.getDate() + (i * 15));
+      } else {
+        // Adiciona 1 mês por parcela (comportamento atual)
+        installmentDate.setMonth(baseDate.getMonth() + i);
+      }
       dates.push(installmentDate.toISOString().split('T')[0]);
     }
     
@@ -68,6 +79,7 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
   const [installments, setInstallments] = useState(1);
   const [installmentValues, setInstallmentValues] = useState<string[]>([""]);
   const [manuallyEditedInstallments, setManuallyEditedInstallments] = useState<boolean[]>([false]);
+  const [installmentType, setInstallmentType] = useState<"mensal" | "quinzenal">("mensal");
   const [advancePayment, setAdvancePayment] = useState("");
   const [discount, setDiscount] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
@@ -87,6 +99,7 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
         setInstallments(editingSale.installments);
         setInstallmentValues(editingSale.installmentValues.map(v => v.toString()));
         setManuallyEditedInstallments(Array(editingSale.installments).fill(true));
+        setInstallmentType(editingSale.installmentType || "mensal");
       }
     }
   }, [editingSale]);
@@ -282,7 +295,8 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
       paymentMethod,
       installments: paymentMethod === "installment" ? installments : undefined,
       installmentValues: paymentMethod === "installment" ? installmentValues.map(v => parseFloat(v)) : undefined,
-      installmentDates: paymentMethod === "installment" ? calculateInstallmentDates(paymentDate, installments) : undefined,
+      installmentDates: paymentMethod === "installment" ? calculateInstallmentDates(paymentDate, installments, installmentType) : undefined,
+      installmentType: paymentMethod === "installment" ? installmentType : undefined,
       advancePayment: advancePayment ? parseFloat(advancePayment) : undefined,
       discount: discount ? parseFloat(discount) : undefined,
       products: [...products],
@@ -311,6 +325,7 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
       setInstallments(1);
       setInstallmentValues([""]);
       setManuallyEditedInstallments([false]);
+      setInstallmentType("mensal");
       setAdvancePayment("");
       setDiscount("");
       setProducts([]);
@@ -596,18 +611,42 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
 
           {paymentMethod === "installment" && (
             <div className="mt-6 space-y-4">
-              <div>
-                <Label htmlFor="installmentNumber">Número de Parcelas</Label>
-                <Input
-                  id="installmentNumber"
-                  type="number"
-                  min="1"
-                  max="12"
-                  value={installments}
-                  onChange={(e) => handleInstallmentsChange(parseInt(e.target.value) || 1)}
-                  className="mt-1 max-w-xs"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Entre 1 e 12 parcelas</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="installmentNumber">Número de Parcelas</Label>
+                  <Input
+                    id="installmentNumber"
+                    type="number"
+                    min="1"
+                    max="12"
+                    value={installments}
+                    onChange={(e) => handleInstallmentsChange(parseInt(e.target.value) || 1)}
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Entre 1 e 12 parcelas</p>
+                </div>
+
+                <div>
+                  <Label>Tipo de Parcelamento</Label>
+                  <RadioGroup 
+                    value={installmentType} 
+                    onValueChange={(value) => setInstallmentType(value as "mensal" | "quinzenal")}
+                    className="mt-2"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="mensal" id="mensal" />
+                      <Label htmlFor="mensal" className="cursor-pointer text-sm">
+                        Mensal (30 dias)
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="quinzenal" id="quinzenal" />
+                      <Label htmlFor="quinzenal" className="cursor-pointer text-sm">
+                        Quinzenal (15 dias)
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
               </div>
 
               <div className="space-y-3">
@@ -652,6 +691,7 @@ export const SalesForm = ({ onSaleAdded, editingSale, onSaleUpdated }: SalesForm
               setInstallments(1);
               setInstallmentValues([""]);
               setManuallyEditedInstallments([false]);
+              setInstallmentType("mensal");
               setAdvancePayment("");
               setProducts([]);
               setEditingProductId(null);
