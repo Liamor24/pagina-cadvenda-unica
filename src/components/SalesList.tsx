@@ -183,10 +183,12 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale, selec
                   </div>
 
                   <div className="flex items-center justify-between mb-4">
-                    <Badge variant={sale.paymentMethod === "pix" ? "default" : "outline"}>
-                      {sale.paymentMethod === "pix" ? "PIX" : `${sale.installments}x`}
-                    </Badge>
-                        {sale.paymentMethod === "installment" && (
+                    <div className="flex items-center gap-2">
+                      <Badge variant={sale.paymentMethod === "pix" ? "default" : "outline"}>
+                        {sale.paymentMethod === "pix" ? "PIX" : `${sale.installments}x ${sale.installmentType === "quinzenal" ? "Quinzenal" : "Mensal"}`}
+                      </Badge>
+                    </div>
+                    {sale.paymentMethod === "installment" && (
                       <span className="text-sm text-muted-foreground">
                         {/* parcelas abertas restantes */}
                         {(() => {

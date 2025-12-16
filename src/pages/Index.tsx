@@ -49,6 +49,7 @@ const Index = () => {
             installments: sale.installments,
             installmentValues: Array.isArray(sale.installment_values) ? (sale.installment_values as number[]) : [],
             installmentDates: Array.isArray(sale.installment_dates) ? (sale.installment_dates as string[]) : [],
+            installmentType: (sale as any).installment_type as "mensal" | "quinzenal" | undefined,
             advancePayment: sale.advance_payment,
             discount: 0,
             products: sale.products ? sale.products.map(product => ({
@@ -143,6 +144,7 @@ const Index = () => {
             installments: data.installments,
             installmentValues: Array.isArray(data.installment_values) ? (data.installment_values as number[]) : [],
             installmentDates: Array.isArray(data.installment_dates) ? (data.installment_dates as string[]) : [],
+            installmentType: (data as any).installment_type as "mensal" | "quinzenal" | undefined,
             advancePayment: data.advance_payment,
             discount: 0,
             products: data.products ? data.products.map((product: any) => ({
@@ -186,6 +188,7 @@ const Index = () => {
             installments: data.installments,
             installmentValues: Array.isArray(data.installment_values) ? (data.installment_values as number[]) : [],
             installmentDates: Array.isArray(data.installment_dates) ? (data.installment_dates as string[]) : [],
+            installmentType: (data as any).installment_type as "mensal" | "quinzenal" | undefined,
             advancePayment: data.advance_payment,
             discount: 0,
             products: data.products ? data.products.map((product: any) => ({
@@ -239,6 +242,7 @@ const Index = () => {
         installments: sale.installments,
         installment_values: sale.installmentValues,
         installment_dates: sale.installmentDates,
+        installment_type: sale.installmentType,
         advance_payment: sale.advancePayment,
       }).select().single();
 
@@ -357,6 +361,7 @@ const Index = () => {
           installments: merged.installments ?? null,
           installment_values: merged.installmentValues ?? null,
           installment_dates: merged.installmentDates ?? null,
+          installment_type: merged.installmentType ?? null,
           advance_payment: merged.advancePayment ?? null,
           discount: merged.discount ?? null,
         })
@@ -382,6 +387,7 @@ const Index = () => {
               installments: merged.installments ?? null,
               installment_values: merged.installmentValues ?? null,
               installment_dates: merged.installmentDates ?? null,
+              installment_type: merged.installmentType ?? null,
               advance_payment: merged.advancePayment ?? null,
             })
             .eq('id', merged.id)
