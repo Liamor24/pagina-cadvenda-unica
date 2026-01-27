@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import ExpenseForm from "@/components/ExpenseForm";
 import ExpenseList from "@/components/ExpenseList";
 import { supabase } from '@/integrations/supabase/client';
+import { executeWithRetry } from "@/utils/supabase-utils";
 import logo from "@/assets/ellas-logo.jpeg";
 export interface Expense {
   id: string;
@@ -35,83 +36,85 @@ const APagar = () => {
   useEffect(() => {
     const fetchSales = async () => {
       try {
-        const { data: salesData, error: salesError } = await supabase
-          .from('sales')
-          .select(`
-            *,
-            products (*)
-          `)
-          .order('created_at', { ascending: false });
+        const salesData = await executeWithRetry(async () => {
+          const { data: salesData, error: salesError } = await supabase
+            .from('sales')
+            .select(`
+              *,
+              products (*)
+            `)
+            .order('created_at', { ascending: false });
 
-        if (salesError) {
-          console.error('Error fetching sales:', salesError);
-          return;
-        }
+          if (salesError) {
+            throw new Error(`Erro ao buscar vendas: ${salesError.message}`);
+          }
 
-        if (salesData && salesData.length > 0) {
-          const transformedSales: Sale[] = salesData.map(sale => ({
-            id: sale.id,
-            customerName: sale.customer_name,
-            purchaseDate: sale.purchase_date,
-            paymentDate: sale.payment_date,
-            paymentMethod: sale.payment_method as "pix" | "installment",
-            installments: sale.installments,
-            installmentValues: Array.isArray(sale.installment_values) ? (sale.installment_values as number[]) : [],
-            installmentDates: Array.isArray(sale.installment_dates) ? (sale.installment_dates as string[]) : [],
-            advancePayment: sale.advance_payment,
-            discount: 0,
-            products: sale.products ? sale.products.map(product => ({
-              id: product.id,
-              productRef: product.product_ref,
-              productName: product.product_name,
-              purchaseValue: product.purchase_value,
-              saleValue: product.sale_value
-            })) : []
-          }));
+          return salesData || [];
+        }, 'Carregamento de vendas (APagar)');
 
-          setSales(transformedSales);
-        }
+        const transformedSales: Sale[] = salesData.map(sale => ({
+          id: sale.id,
+          customerName: sale.customer_name,
+          purchaseDate: sale.purchase_date,
+          paymentDate: sale.payment_date,
+          paymentMethod: sale.payment_method as "pix" | "installment",
+          installments: sale.installments,
+          installmentValues: Array.isArray(sale.installment_values) ? (sale.installment_values as number[]) : [],
+          installmentDates: Array.isArray(sale.installment_dates) ? (sale.installment_dates as string[]) : [],
+          advancePayment: sale.advance_payment,
+          discount: 0,
+          products: sale.products ? sale.products.map(product => ({
+            id: product.id,
+            productRef: product.product_ref,
+            productName: product.product_name,
+            purchaseValue: product.purchase_value,
+            saleValue: product.sale_value
+          })) : []
+        }));
+
+        setSales(transformedSales);
       } catch (error) {
-        console.error('Error fetching sales:', error);
+        console.error('Erro ao carregar vendas:', error);
       }
     };
 
     fetchSales();
   }, []);
 
-  // Fetch expenses from Supabase when component mounts
+  // Fetch expenses from Supabase with retry logic
   useEffect(() => {
     const fetchExpenses = async () => {
       try {
-        const { data: expensesData, error: expensesError } = await supabase
-          .from('expenses')
-          .select('*')
-          .order('created_at', { ascending: false });
+        const expensesData = await executeWithRetry(async () => {
+          const { data: expensesData, error: expensesError } = await supabase
+            .from('expenses')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-        if (expensesError) {
-          console.error('Error fetching expenses:', expensesError);
-          return;
-        }
+          if (expensesError) {
+            throw new Error(`Erro ao buscar despesas: ${expensesError.message}`);
+          }
 
-        if (expensesData && expensesData.length > 0) {
-          const transformedExpenses: Expense[] = expensesData.map(expense => ({
-            id: expense.id,
-            grupo_id: expense.grupo_id,
-            descricao: expense.descricao,
-            categoria: expense.categoria as "Despesa Operacional" | "Embalagens" | "Estoque" | "Fornecedor" | "Outros",
-            data: expense.data,
-            valorTotal: expense.valor_total,
-            formaPagamento: expense.forma_pagamento as "PIX" | "Parcelado",
-            parcelas: expense.parcelas,
-            parcelaAtual: expense.parcela_atual,
-            mesReferencia: expense.mes_referencia,
-            observacao: expense.observacao,
-          }));
+          return expensesData || [];
+        }, 'Carregamento de despesas (APagar)');
 
-          setExpenses(transformedExpenses);
-        }
+        const transformedExpenses: Expense[] = expensesData.map(expense => ({
+          id: expense.id,
+          grupo_id: expense.grupo_id,
+          descricao: expense.descricao,
+          categoria: expense.categoria as "Despesa Operacional" | "Embalagens" | "Estoque" | "Fornecedor" | "Outros",
+          data: expense.data,
+          valorTotal: expense.valor_total,
+          formaPagamento: expense.forma_pagamento as "PIX" | "Parcelado",
+          parcelas: expense.parcelas,
+          parcelaAtual: expense.parcela_atual,
+          mesReferencia: expense.mes_referencia,
+          observacao: expense.observacao,
+        }));
+
+        setExpenses(transformedExpenses);
       } catch (error) {
-        console.error('Error fetching expenses:', error);
+        console.error('Erro ao carregar despesas:', error);
       }
     };
 
