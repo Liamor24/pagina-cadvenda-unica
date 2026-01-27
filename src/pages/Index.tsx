@@ -124,98 +124,129 @@ const Index = () => {
     fetchExpenses();
   }, []);
 
-  // Realtime updates de vendas e produtos
+  // Realtime updates de vendas e produtos com reconnect automático
   useEffect(() => {
-    const channel = supabase
-      .channel('realtime-sales')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, async (payload: any) => {
-        try {
-          const saleId = payload.new?.id || payload.old?.id;
-          if (!saleId) return;
-          const { data, error } = await supabase
-            .from('sales')
-            .select(`*, products (*)`)
-            .eq('id', saleId)
-            .single();
-          if (error) { console.error('Realtime fetch error:', error); setDbStatus('error'); return; }
-          const transformedSale: Sale = {
-            id: data.id,
-            customerName: data.customer_name,
-            purchaseDate: data.purchase_date,
-            paymentDate: data.payment_date,
-            paymentMethod: data.payment_method as "pix" | "installment",
-            installments: data.installments,
-            installmentValues: Array.isArray(data.installment_values) ? (data.installment_values as number[]) : [],
-            installmentDates: Array.isArray(data.installment_dates) ? (data.installment_dates as string[]) : [],
-            installmentType: (data as any).installment_type as "mensal" | "quinzenal" | undefined,
-            advancePayment: data.advance_payment,
-            discount: 0,
-            products: data.products ? data.products.map((product: any) => ({
-              id: product.id,
-              productRef: product.product_ref,
-              productName: product.product_name,
-              purchaseValue: product.purchase_value,
-              saleValue: product.sale_value
-            })) : []
-          };
-          setSales(prev => {
-            const exists = prev.find(s => s.id === transformedSale.id);
-            if (exists) {
-              return prev.map(s => s.id === transformedSale.id ? transformedSale : s);
+    let channel: any = null;
+    let reconnectInterval: NodeJS.Timeout | null = null;
+    let isSubscribed = true;
+
+    const setupRealtimeChannel = async () => {
+      if (!isSubscribed) return;
+
+      try {
+        channel = supabase
+          .channel('realtime-sales')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, async (payload: any) => {
+            try {
+              const saleId = payload.new?.id || payload.old?.id;
+              if (!saleId) return;
+              const { data, error } = await supabase
+                .from('sales')
+                .select(`*, products (*)`)
+                .eq('id', saleId)
+                .single();
+              if (error) { console.error('Realtime fetch error:', error); setDbStatus('error'); return; }
+              const transformedSale: Sale = {
+                id: data.id,
+                customerName: data.customer_name,
+                purchaseDate: data.purchase_date,
+                paymentDate: data.payment_date,
+                paymentMethod: data.payment_method as "pix" | "installment",
+                installments: data.installments,
+                installmentValues: Array.isArray(data.installment_values) ? (data.installment_values as number[]) : [],
+                installmentDates: Array.isArray(data.installment_dates) ? (data.installment_dates as string[]) : [],
+                installmentType: (data as any).installment_type as "mensal" | "quinzenal" | undefined,
+                advancePayment: data.advance_payment,
+                discount: 0,
+                products: data.products ? data.products.map((product: any) => ({
+                  id: product.id,
+                  productRef: product.product_ref,
+                  productName: product.product_name,
+                  purchaseValue: product.purchase_value,
+                  saleValue: product.sale_value
+                })) : []
+              };
+              setSales(prev => {
+                const exists = prev.find(s => s.id === transformedSale.id);
+                if (exists) {
+                  return prev.map(s => s.id === transformedSale.id ? transformedSale : s);
+                }
+                return [transformedSale, ...prev];
+              });
+              setDbStatus('connected');
+              toast({ title: "Dados sincronizados", description: "Atualização em tempo real aplicada." });
+            } catch (err) {
+              console.error('Erro no realtime sales:', err);
+              setDbStatus('error');
             }
-            return [transformedSale, ...prev];
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, async (payload: any) => {
+            try {
+              const saleId = payload.new?.sale_id || payload.old?.sale_id;
+              if (!saleId) return;
+              const { data, error } = await supabase
+                .from('sales')
+                .select(`*, products (*)`)
+                .eq('id', saleId)
+                .single();
+              if (error) { console.error('Realtime fetch error (products):', error); setDbStatus('error'); return; }
+              const transformedSale: Sale = {
+                id: data.id,
+                customerName: data.customer_name,
+                purchaseDate: data.purchase_date,
+                paymentDate: data.payment_date,
+                paymentMethod: data.payment_method as "pix" | "installment",
+                installments: data.installments,
+                installmentValues: Array.isArray(data.installment_values) ? (data.installment_values as number[]) : [],
+                installmentDates: Array.isArray(data.installment_dates) ? (data.installment_dates as string[]) : [],
+                installmentType: (data as any).installment_type as "mensal" | "quinzenal" | undefined,
+                advancePayment: data.advance_payment,
+                discount: 0,
+                products: data.products ? data.products.map((product: any) => ({
+                  id: product.id,
+                  productRef: product.product_ref,
+                  productName: product.product_name,
+                  purchaseValue: product.purchase_value,
+                  saleValue: product.sale_value
+                })) : []
+              };
+              setSales(prev => prev.map(s => s.id === transformedSale.id ? transformedSale : s));
+              setDbStatus('connected');
+              toast({ title: "Produtos sincronizados", description: "Atualização em tempo real aplicada." });
+            } catch (err) {
+              console.error('Erro no realtime products:', err);
+              setDbStatus('error');
+            }
+          })
+          .subscribe((status) => {
+            console.log('[Realtime] Status:', status);
+            if (status === 'SUBSCRIBED') {
+              setDbStatus('connected');
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              setDbStatus('error');
+              if (reconnectInterval) clearInterval(reconnectInterval);
+              reconnectInterval = setInterval(() => {
+                console.log('[Realtime] Tentando reconectar...');
+                setupRealtimeChannel();
+              }, 5000);
+            }
           });
-          setDbStatus('connected');
-          toast({ title: "Dados sincronizados", description: "Atualização em tempo real aplicada." });
-        } catch (err) {
-          console.error('Erro no realtime sales:', err);
-          setDbStatus('error');
-        }
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, async (payload: any) => {
-        try {
-          const saleId = payload.new?.sale_id || payload.old?.sale_id;
-          if (!saleId) return;
-          const { data, error } = await supabase
-            .from('sales')
-            .select(`*, products (*)`)
-            .eq('id', saleId)
-            .single();
-          if (error) { console.error('Realtime fetch error (products):', error); setDbStatus('error'); return; }
-          const transformedSale: Sale = {
-            id: data.id,
-            customerName: data.customer_name,
-            purchaseDate: data.purchase_date,
-            paymentDate: data.payment_date,
-            paymentMethod: data.payment_method as "pix" | "installment",
-            installments: data.installments,
-            installmentValues: Array.isArray(data.installment_values) ? (data.installment_values as number[]) : [],
-            installmentDates: Array.isArray(data.installment_dates) ? (data.installment_dates as string[]) : [],
-            installmentType: (data as any).installment_type as "mensal" | "quinzenal" | undefined,
-            advancePayment: data.advance_payment,
-            discount: 0,
-            products: data.products ? data.products.map((product: any) => ({
-              id: product.id,
-              productRef: product.product_ref,
-              productName: product.product_name,
-              purchaseValue: product.purchase_value,
-              saleValue: product.sale_value
-            })) : []
-          };
-          setSales(prev => prev.map(s => s.id === transformedSale.id ? transformedSale : s));
-          setDbStatus('connected');
-          toast({ title: "Produtos sincronizados", description: "Atualização em tempo real aplicada." });
-        } catch (err) {
-          console.error('Erro no realtime products:', err);
-          setDbStatus('error');
-        }
-      })
-      .subscribe();
+      } catch (error) {
+        console.error('[Realtime] Erro ao setup:', error);
+        setDbStatus('error');
+      }
+    };
+
+    setupRealtimeChannel();
 
     return () => {
-      supabase.removeChannel(channel);
+      isSubscribed = false;
+      if (reconnectInterval) clearInterval(reconnectInterval);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
-  }, []);
+  }, []);;
 
   const [selectedMonth, setSelectedMonth] = useState<string>("total");
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
