@@ -1,0 +1,123 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║            🔴 PROBLEMA: DADOS NÃO APARECEM NO SITE                        ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+📋 SITUAÇÃO ATUAL
+═══════════════════════════════════════════════════════════════════════════════
+  ✅ Banco de dados Supabase está ALIMENTADO com dados
+  ❌ Site NÃO mostra os dados (aparece vazio)
+  ❌ É como se o site não enxergasse o banco
+
+🔍 CAUSA IDENTIFICADA
+═══════════════════════════════════════════════════════════════════════════════
+  🔴 PROBLEMA PRINCIPAL: Row Level Security (RLS) Bloqueando Acesso
+
+  O que é RLS?
+  • Supabase tem uma camada de segurança que controla quem pode ver dados
+  • Por padrão, RLS está ATIVADO (tabelas: sales, products, expenses)
+  • Usuários anônimos (sem login) podem estar bloqueados
+
+  Por que não funciona?
+  • Políticas RLS existem mas podem estar com erro
+  • Usuário anônimo não tem permissão de leitura
+  • auth.uid() retorna NULL sem usuário logado
+
+⚡ SOLUÇÃO (2 Minutos)
+═══════════════════════════════════════════════════════════════════════════════
+
+1️⃣ ABRA SUPABASE SQL EDITOR
+   • Vá para: https://supabase.com
+   • Projeto: aaavxylbuwkyfpnzyzfx
+   • Clique em "SQL Editor"
+
+2️⃣ COPIE E EXECUTE ESTE SQL:
+
+   -- Habilitar RLS
+   ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
+
+   -- Remover políticas antigas
+   DROP POLICY IF EXISTS "Permitir leitura de vendas" ON public.sales;
+   DROP POLICY IF EXISTS "Permitir inserção de vendas" ON public.sales;
+   DROP POLICY IF EXISTS "Permitir atualização de vendas" ON public.sales;
+   DROP POLICY IF EXISTS "Permitir exclusão de vendas" ON public.sales;
+   DROP POLICY IF EXISTS "Permitir leitura de produtos" ON public.products;
+   DROP POLICY IF EXISTS "Permitir inserção de produtos" ON public.products;
+   DROP POLICY IF EXISTS "Permitir atualização de produtos" ON public.products;
+   DROP POLICY IF EXISTS "Permitir exclusão de produtos" ON public.products;
+   DROP POLICY IF EXISTS "Permitir leitura de despesas" ON public.expenses;
+   DROP POLICY IF EXISTS "Permitir inserção de despesas" ON public.expenses;
+   DROP POLICY IF EXISTS "Permitir atualização de despesas" ON public.expenses;
+   DROP POLICY IF EXISTS "Permitir exclusão de despesas" ON public.expenses;
+
+   -- Criar políticas permissivas
+   CREATE POLICY "Enable all sales" ON public.sales 
+     AS PERMISSIVE FOR ALL USING (true) WITH CHECK (true);
+   CREATE POLICY "Enable all products" ON public.products 
+     AS PERMISSIVE FOR ALL USING (true) WITH CHECK (true);
+   CREATE POLICY "Enable all expenses" ON public.expenses 
+     AS PERMISSIVE FOR ALL USING (true) WITH CHECK (true);
+
+3️⃣ TESTE NO SITE
+   • Abra: http://localhost:5173
+   • Pressione: Ctrl+Shift+R (limpar cache)
+   • ✅ Dados devem aparecer agora!
+
+🧪 TESTES PARA DIAGNÓSTICO
+═══════════════════════════════════════════════════════════════════════════════
+
+Se ainda não funcionar, execute estes testes:
+
+TEST 1: Verificar se banco tem dados
+  SELECT COUNT(*) FROM public.sales;
+  ➜ Se retorna > 0, tem dados no banco ✅
+  ➜ Se retorna 0, banco está vazio ❌
+
+TEST 2: Verificar políticas
+  SELECT * FROM pg_policies WHERE tablename IN ('sales', 'products', 'expenses');
+  ➜ Se tiver políticas criadas ✅
+  ➜ Se não tiver, políticas não foram criadas ❌
+
+TEST 3: Verificar RLS status
+  SELECT tablename, rowsecurity FROM pg_tables WHERE tablename = 'sales';
+  ➜ Se rowsecurity = true, RLS está ativado
+  ➜ Se rowsecurity = false, RLS está desativado
+
+TEST 4: Desabilitar RLS temporariamente (TESTE FINAL)
+  ALTER TABLE public.sales DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE public.products DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE public.expenses DISABLE ROW LEVEL SECURITY;
+  ➜ Se dados aparecem = RLS era o problema
+  ➜ Se ainda não aparecem = problema é outro
+
+📁 ARQUIVOS DISPONÍVEIS
+═══════════════════════════════════════════════════════════════════════════════
+  • SOLUCAO_RAPIDA_DADOS.md ......... Guia rápido (COMECE AQUI)
+  • DIAGNOSTICO_DADOS_NAO_APARECEM.md Análise detalhada
+  • FIX_RLS_POLICIES.sql ............. Script SQL completo
+
+🔗 LINK DIRETO SUPABASE
+═══════════════════════════════════════════════════════════════════════════════
+  SQL Editor: https://supabase.com/dashboard/project/aaavxylbuwkyfpnzyzfx/sql/new
+
+⚠️ LEMBRETE IMPORTANTE
+═══════════════════════════════════════════════════════════════════════════════
+  • As políticas acima usam PERMISSIVE (permite tudo)
+  • Perfeito para DESENVOLVIMENTO
+  • Para PRODUÇÃO, use políticas mais restritivas com auth.uid()
+
+✨ CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+  ✅ Banco tem dados? (verificar no Supabase Dashboard)
+  ✅ Executou o SQL acima?
+  ✅ Limpou cache do navegador? (Ctrl+Shift+R)
+  ✅ Vê os dados no site agora?
+
+════════════════════════════════════════════════════════════════════════════════
+Se após fazer tudo AINDA não funcionar, veja os logs:
+F12 → Console e procure por erros específicos
+════════════════════════════════════════════════════════════════════════════════
+
+Data: 27 de Janeiro de 2026
+Status: 🔴 BLOQUEADO POR RLS (Solução disponível)
