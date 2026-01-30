@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { SalesForm, type Sale } from "@/components/SalesForm";
 import { supabase } from '@/integrations/supabase/client';
 import { SalesList } from "@/components/SalesList";
