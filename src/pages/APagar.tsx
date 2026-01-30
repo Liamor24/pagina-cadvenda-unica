@@ -39,7 +39,7 @@ const APagar = () => {
         const salesData = await executeWithRetry(async () => {
           const { data: salesData, error: salesError } = await supabase
             .from('sales')
-            .select('*')
+            .select('*, products(*)')
             .order('created_at', { ascending: false });
 
           if (salesError) {
