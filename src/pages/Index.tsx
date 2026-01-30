@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { SalesForm, type Sale } from "@/components/SalesForm";
 import { supabase } from '@/integrations/supabase/client';
 import { SalesList } from "@/components/SalesList";
@@ -53,7 +53,7 @@ const Index = () => {
         const salesData = await executeWithRetry(async () => {
           const { data: salesData, error: salesError } = await supabase
             .from('sales')
-            .select('*, products(*)')
+            .select('*')
             .order('created_at', { ascending: false });
 
           if (salesError) {
