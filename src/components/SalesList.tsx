@@ -134,7 +134,7 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale, selec
                       <div className="flex items-center justify-between gap-4">
                         <div>
                           <h3 className="text-lg font-semibold text-foreground">{sale.customerName}</h3>
-                          <p className="text-sm text-muted-foreground">{(() => { const [y,m,d] = (sale.purchaseDate || '').split('-'); return d && m && y ? `${d}/${m}/${y}` : ''; })()}</p>
+                          <p className="text-sm text-muted-foreground">{new Date(sale.paymentDate).toLocaleDateString('pt-BR')}</p>
                         </div>
 
                         <div className="text-right">

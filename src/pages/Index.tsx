@@ -43,7 +43,6 @@ const Index = () => {
     }));
   };
 
-
   // Fetch sales from Supabase with retry logic
   useEffect(() => {
     const fetchSales = async () => {
@@ -54,7 +53,7 @@ const Index = () => {
         const salesData = await executeWithRetry(async () => {
           const { data: salesData, error: salesError } = await supabase
             .from('sales')
-            .select(`*, products (*)`)
+            .select('*')
             .order('created_at', { ascending: false });
 
           if (salesError) {
@@ -64,9 +63,7 @@ const Index = () => {
           return salesData || [];
         }, 'Carregamento de vendas');
 
-        let transformedSales = transformSalesData(salesData);
-
-
+        const transformedSales = transformSalesData(salesData);
         console.log('Vendas carregadas com sucesso:', transformedSales.length);
         setSales(transformedSales);
         setDbStatus('connected');
@@ -190,7 +187,6 @@ const Index = () => {
                 .eq('id', saleId)
                 .single();
               if (error) { console.error('Realtime fetch error (products):', error); setDbStatus('error'); return; }
-
               const transformedSale: Sale = {
                 id: data.id,
                 customerName: data.customer_name,
@@ -211,59 +207,11 @@ const Index = () => {
                   saleValue: product.sale_value
                 })) : []
               };
-
-
               setSales(prev => prev.map(s => s.id === transformedSale.id ? transformedSale : s));
               setDbStatus('connected');
               toast({ title: "Produtos sincronizados", description: "Atualização em tempo real aplicada." });
             } catch (err) {
               console.error('Erro no realtime products:', err);
-              setDbStatus('error');
-            }
-          })
-
-          // Também escuta mudanças na tabela `produtos` (compatibilidade com nomes PT em produção)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'produtos' }, async (payload: any) => {
-            try {
-              const saleId = payload.new?.id_da_venda || payload.old?.id_da_venda;
-              if (!saleId) return;
-
-              // Buscar venda + products (se existir) e complementar com tabela `produtos` se necessário
-              const { data, error } = await supabase
-                .from('sales')
-                .select(`*, products (*)`)
-                .eq('id', saleId)
-                .single();
-
-              if (error) { console.error('Realtime fetch error (produtos):', error); setDbStatus('error'); return; }
-
-              const transformedSale: Sale = {
-                id: data.id,
-                customerName: data.customer_name,
-                purchaseDate: data.purchase_date,
-                paymentDate: data.payment_date,
-                paymentMethod: data.payment_method as "pix" | "installment",
-                installments: data.installments,
-                installmentValues: Array.isArray(data.installment_values) ? (data.installment_values as number[]) : [],
-                installmentDates: Array.isArray(data.installment_dates) ? (data.installment_dates as string[]) : [],
-                installmentType: (data as any).installment_type as "mensal" | "quinzenal" | undefined,
-                advancePayment: data.advance_payment,
-                discount: 0,
-                products: data.products ? data.products.map((product: any) => ({
-                  id: product.id,
-                  productRef: product.product_ref,
-                  productName: product.product_name,
-                  purchaseValue: product.purchase_value,
-                  saleValue: product.sale_value
-                })) : []
-              };
-
-
-              setSales(prev => prev.map(s => s.id === transformedSale.id ? transformedSale : s));
-              setDbStatus('connected');
-              toast({ title: "Produtos sincronizados", description: "Atualização em tempo real aplicada (produtos)." });
-            } catch (err) {
-              console.error('Erro no realtime produtos:', err);
               setDbStatus('error');
             }
           })
@@ -365,44 +313,6 @@ const Index = () => {
           });
         } else {
           console.log('✅ Products inserted successfully');
-
-          // Buscar a venda com produtos para atualizar o estado imediatamente
-          try {
-            const { data: saleWithProducts, error: fetchErr } = await supabase
-              .from('sales')
-              .select(`*, products (*)`)
-              .eq('id', saleId)
-              .single();
-
-            if (fetchErr) {
-              console.error('❌ Error fetching sale with products after insert:', fetchErr);
-            } else if (saleWithProducts) {
-              const updatedSale: Sale = {
-                id: saleWithProducts.id,
-                customerName: saleWithProducts.customer_name,
-                purchaseDate: saleWithProducts.purchase_date,
-                paymentDate: saleWithProducts.payment_date,
-                paymentMethod: saleWithProducts.payment_method as "pix" | "installment",
-                installments: saleWithProducts.installments,
-                installmentValues: Array.isArray(saleWithProducts.installment_values) ? (saleWithProducts.installment_values as number[]) : [],
-                installmentDates: Array.isArray(saleWithProducts.installment_dates) ? (saleWithProducts.installment_dates as string[]) : [],
-                installmentType: (saleWithProducts as any).installment_type as "mensal" | "quinzenal" | undefined,
-                advancePayment: saleWithProducts.advance_payment,
-                discount: 0,
-                products: saleWithProducts.products ? saleWithProducts.products.map((p: any) => ({
-                  id: p.id,
-                  productRef: p.product_ref,
-                  productName: p.product_name,
-                  purchaseValue: p.purchase_value,
-                  saleValue: p.sale_value,
-                })) : []
-              };
-
-              setSales(prev => prev.map(s => s.id === saleId ? updatedSale : s));
-            }
-          } catch (err) {
-            console.error('Erro ao buscar venda com produtos após inserção:', err);
-          }
         }
       }
 
