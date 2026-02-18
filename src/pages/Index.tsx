@@ -43,44 +43,6 @@ const Index = () => {
     }));
   };
 
-  // Helper: tenta carregar produtos a partir de uma tabela alternativa chamada 'produtos' (compatibilidade com produção)
-  const enrichSalesWithProdutos = async (salesArray: any[]) => {
-    try {
-      const saleIds = salesArray.map(s => s.id).filter(Boolean);
-      if (saleIds.length === 0) return salesArray;
-
-      const { data: produtosRows, error: prodErr } = await supabase
-        .from('produtos')
-        .select('*')
-        .in('id_da_venda', saleIds as string[]);
-
-      if (prodErr) {
-        // Se tabela 'produtos' não existir, apenas retorna
-        console.warn('Tabela `produtos` não disponível ou erro ao buscar:', prodErr.message ?? prodErr);
-        return salesArray;
-      }
-
-      const mapBySale: Record<string, any[]> = {};
-      (produtosRows || []).forEach((r: any) => {
-        const saleId = r.sale_id ?? r.id_da_venda ?? r['id_da_venda'] ?? r['id da venda'] ?? null;
-        if (!saleId) return;
-        const product = {
-          id: r.id,
-          productRef: r.product_ref ?? r.referencia_do_produto ?? r['referência_do_produto'] ?? r['referencia_do_produto'] ?? null,
-          productName: r.product_name ?? r.nome_do_produto ?? r['nome do produto'] ?? r['nome_do_produto'] ?? null,
-          purchaseValue: Number(String(r.purchase_value ?? r.valor_de_compra ?? r['valor_de_compra'] ?? r['valor de compra'] ?? 0).replace(',', '.')),
-          saleValue: Number(String(r.sale_value ?? r.valor_de_venda ?? r['valor_de_venda'] ?? r['valor de venda'] ?? 0).replace(',', '.')),
-        };
-        if (!mapBySale[saleId]) mapBySale[saleId] = [];
-        mapBySale[saleId].push(product);
-      });
-
-      return salesArray.map(s => ({ ...s, products: (s.products && s.products.length > 0) ? s.products : (mapBySale[s.id] || []) }));
-    } catch (err) {
-      console.error('Erro ao enriquecer vendas com produtos (produtos):', err);
-      return salesArray;
-    }
-  };
 
   // Fetch sales from Supabase with retry logic
   useEffect(() => {
@@ -104,8 +66,6 @@ const Index = () => {
 
         let transformedSales = transformSalesData(salesData);
 
-        // Se não houver produtos pela relação 'products', tenta buscar na tabela 'produtos' (compatibilidade)
-        transformedSales = await enrichSalesWithProdutos(transformedSales);
 
         console.log('Vendas carregadas com sucesso:', transformedSales.length);
         setSales(transformedSales);
@@ -252,27 +212,6 @@ const Index = () => {
                 })) : []
               };
 
-              // Se o relation 'products' não traz dados, tenta buscar na tabela 'produtos' (compatibilidade)
-              if (!transformedSale.products || transformedSale.products.length === 0) {
-                try {
-                  const { data: altProducts } = await supabase
-                    .from('produtos')
-                    .select('*')
-                    .eq('id_da_venda', saleId);
-
-                  if (altProducts && altProducts.length > 0) {
-                    transformedSale.products = altProducts.map((p: any) => ({
-                      id: p.id,
-                      productRef: p.product_ref ?? p.referencia_do_produto ?? p['referência_do_produto'] ?? null,
-                      productName: p.product_name ?? p.nome_do_produto ?? p['nome_do_produto'] ?? null,
-                      purchaseValue: Number(String(p.purchase_value ?? p.valor_de_compra ?? 0).replace(',', '.')),
-                      saleValue: Number(String(p.sale_value ?? p.valor_de_venda ?? 0).replace(',', '.')),
-                    }));
-                  }
-                } catch (e) {
-                  console.warn('Erro ao buscar produtos em tabela `produtos` no realtime:', e);
-                }
-              }
 
               setSales(prev => prev.map(s => s.id === transformedSale.id ? transformedSale : s));
               setDbStatus('connected');
@@ -319,27 +258,6 @@ const Index = () => {
                 })) : []
               };
 
-              // Se ainda não recebeu produtos via relation, busca na tabela `produtos`
-              if (!transformedSale.products || transformedSale.products.length === 0) {
-                try {
-                  const { data: altProducts } = await supabase
-                    .from('produtos')
-                    .select('*')
-                    .eq('id_da_venda', saleId);
-
-                  if (altProducts && altProducts.length > 0) {
-                    transformedSale.products = altProducts.map((p: any) => ({
-                      id: p.id,
-                      productRef: p.product_ref ?? p.referencia_do_produto ?? p['referência_do_produto'] ?? null,
-                      productName: p.product_name ?? p.nome_do_produto ?? p['nome_do_produto'] ?? null,
-                      purchaseValue: Number(String(p.purchase_value ?? p.valor_de_compra ?? 0).replace(',', '.')),
-                      saleValue: Number(String(p.sale_value ?? p.valor_de_venda ?? 0).replace(',', '.')),
-                    }));
-                  }
-                } catch (e) {
-                  console.warn('Erro ao buscar produtos em tabela `produtos` no realtime (alt):', e);
-                }
-              }
 
               setSales(prev => prev.map(s => s.id === transformedSale.id ? transformedSale : s));
               setDbStatus('connected');
