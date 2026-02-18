@@ -1,38 +1,66 @@
 
-## Problemas Identificados
 
-### 1. Data errada abaixo do nome do cliente
-No arquivo `SalesList.tsx` (linha 137), o sistema mostra a **Data de Pagamento** (`paymentDate`) em vez da **Data da Compra** (`purchaseDate`). Alem disso, o uso de `new Date()` para formatar causa deslocamento de fuso horario (a data pode pular um dia ou um mes).
+## Correcoes e Melhorias
 
-### 2. Erros de build com tabela "produtos"
-Os arquivos `Index.tsx` e `APagar.tsx` tentam acessar uma tabela chamada `produtos` que nao existe no banco de dados. O TypeScript rejeita isso porque o tipo gerado so conhece `products`, `sales` e `expenses`.
+### 1. Corrigir contagem de parcelas (SalesList.tsx)
+
+**Problema:** A contagem de parcelas mostra as restantes em ordem decrescente (6/6, 5/6...). O correto e mostrar quantas ja foram pagas: 1/6, 2/6, 3/6...
+
+**Solucao:** Na linha 194-198 de `SalesList.tsx`, inverter a logica: em vez de contar parcelas restantes (`remaining`), contar parcelas pagas (`paid = total - remaining`) e exibir `paid/total parcelas`.
+
+```
+const paid = sale.installmentDates.filter(d => d !== null && d !== undefined && new Date(d) < now).length;
+return `${paid}/${sale.installments} parcelas`;
+```
+
+### 2. Botao de olho para ocultar valores (Index.tsx + SalesList.tsx)
+
+**Problema:** O usuario quer poder ocultar os valores de "Valor Total de Compra" e "Lucro Total" nos cards de venda.
+
+**Solucao:**
+- Adicionar um estado `hideValues` no componente `Index.tsx`
+- Criar um botao com icone `Eye` / `EyeOff` no topo da pagina (proximo ao titulo ou filtros)
+- Passar `hideValues` como prop para `SalesList`
+- No `SalesList`, quando `hideValues` for `true`, substituir os valores monetarios de "Valor Total de Compra" e "Lucro Total" por `R$ ••••••`
+
+**Arquivos modificados:**
+- `src/pages/Index.tsx` - estado + botao de olho
+- `src/components/SalesList.tsx` - nova prop + logica de ocultar valores
+
+### 3. Corrigir erros de build (referencias a tabela 'produtos')
+
+**Problema:** Os arquivos `Index.tsx` e `APagar.tsx` referenciam uma tabela `produtos` que nao existe no esquema do banco. O TypeScript rejeita isso.
+
+**Solucao:** Remover todos os blocos que tentam buscar da tabela `produtos`:
+- `Index.tsx`: remover a funcao `enrichSalesWithProdutos` (linhas 46-90) e os dois blocos de fallback dentro dos handlers de realtime (linhas 255-275 e 322-342)
+- `APagar.tsx`: remover o bloco de compatibilidade (linhas 72-104)
+
+Os dados de produtos ja vem corretamente pela tabela `products` via relation nas queries principais.
 
 ---
 
-## Plano de Correcao
+### Detalhes Tecnicos
 
-### Passo 1 - Corrigir a data exibida no card da venda
-- Em `SalesList.tsx` linha 137, trocar `sale.paymentDate` por `sale.purchaseDate`
-- Usar parsing manual da string de data (formato `YYYY-MM-DD`) para evitar problemas de fuso horario:
-  ```
-  const [y, m, d] = sale.purchaseDate.split('-');
-  exibir: `${d}/${m}/${y}`
-  ```
+**SalesList.tsx - Prop nova:**
+```typescript
+interface SalesListProps {
+  sales: Sale[];
+  onDeleteSale: (saleId: string) => void;
+  onEditSale: (sale: Sale) => void;
+  onUpdateSale?: (sale: Partial<Sale> & { id: string }) => void | Promise<void>;
+  selectedMonth?: string;
+  hideValues?: boolean;  // NOVA
+}
+```
 
-### Passo 2 - Corrigir o formatDate no SalesForm
-- Em `SalesForm.tsx` linha 44-46, trocar `toISOString().split('T')[0]` por formatacao local usando `getFullYear()`, `getMonth()`, `getDate()` para evitar que a data inicial ja venha errada
+**Index.tsx - Botao de olho:**
+- Importar `Eye` e `EyeOff` de `lucide-react`
+- Estado: `const [hideValues, setHideValues] = useState(false)`
+- Botao no topo da pagina com toggle
+- Passar `hideValues={hideValues}` para `<SalesList />`
 
-### Passo 3 - Remover referencias a tabela "produtos"
-- Em `Index.tsx`: remover as chamadas `supabase.from('produtos')` (linhas ~52-55 e ~325-328) e a funcao `enrichSalesWithProdutos`
-- Em `APagar.tsx`: remover o bloco que tenta buscar da tabela `produtos` (linhas ~76-79)
-- Essa tabela nunca existiu no banco atual; os dados de produtos estao na tabela `products`
+**Campos ocultados quando `hideValues=true`:**
+- "Valor Total de Compra" (grid col 1)
+- "Lucro Total" (grid col 2)
+- Os valores dentro de "Ver Produtos" (compra, venda, lucro por produto)
 
----
-
-## Detalhes Tecnicos
-
-Arquivos modificados:
-- `src/components/SalesList.tsx` - corrigir campo de data e formatacao
-- `src/components/SalesForm.tsx` - corrigir funcao formatDate
-- `src/pages/Index.tsx` - remover referencias a 'produtos'
-- `src/pages/APagar.tsx` - remover referencias a 'produtos'
