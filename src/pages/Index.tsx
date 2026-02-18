@@ -43,6 +43,45 @@ const Index = () => {
     }));
   };
 
+  // Helper: tenta carregar produtos a partir de uma tabela alternativa chamada 'produtos' (compatibilidade com produção)
+  const enrichSalesWithProdutos = async (salesArray: any[]) => {
+    try {
+      const saleIds = salesArray.map(s => s.id).filter(Boolean);
+      if (saleIds.length === 0) return salesArray;
+
+      const { data: produtosRows, error: prodErr } = await supabase
+        .from('produtos')
+        .select('*')
+        .in('id_da_venda', saleIds as string[]);
+
+      if (prodErr) {
+        // Se tabela 'produtos' não existir, apenas retorna
+        console.warn('Tabela `produtos` não disponível ou erro ao buscar:', prodErr.message ?? prodErr);
+        return salesArray;
+      }
+
+      const mapBySale: Record<string, any[]> = {};
+      (produtosRows || []).forEach((r: any) => {
+        const saleId = r.sale_id ?? r.id_da_venda ?? r['id_da_venda'] ?? r['id da venda'] ?? null;
+        if (!saleId) return;
+        const product = {
+          id: r.id,
+          productRef: r.product_ref ?? r.referencia_do_produto ?? r['referência_do_produto'] ?? r['referencia_do_produto'] ?? null,
+          productName: r.product_name ?? r.nome_do_produto ?? r['nome do produto'] ?? r['nome_do_produto'] ?? null,
+          purchaseValue: Number(String(r.purchase_value ?? r.valor_de_compra ?? r['valor_de_compra'] ?? r['valor de compra'] ?? 0).replace(',', '.')),
+          saleValue: Number(String(r.sale_value ?? r.valor_de_venda ?? r['valor_de_venda'] ?? r['valor de venda'] ?? 0).replace(',', '.')),
+        };
+        if (!mapBySale[saleId]) mapBySale[saleId] = [];
+        mapBySale[saleId].push(product);
+      });
+
+      return salesArray.map(s => ({ ...s, products: (s.products && s.products.length > 0) ? s.products : (mapBySale[s.id] || []) }));
+    } catch (err) {
+      console.error('Erro ao enriquecer vendas com produtos (produtos):', err);
+      return salesArray;
+    }
+  };
+
   // Fetch sales from Supabase with retry logic
   useEffect(() => {
     const fetchSales = async () => {
@@ -53,7 +92,7 @@ const Index = () => {
         const salesData = await executeWithRetry(async () => {
           const { data: salesData, error: salesError } = await supabase
             .from('sales')
-            .select('*')
+            .select(`*, products (*)`)
             .order('created_at', { ascending: false });
 
           if (salesError) {
@@ -63,7 +102,11 @@ const Index = () => {
           return salesData || [];
         }, 'Carregamento de vendas');
 
-        const transformedSales = transformSalesData(salesData);
+        let transformedSales = transformSalesData(salesData);
+
+        // Se não houver produtos pela relação 'products', tenta buscar na tabela 'produtos' (compatibilidade)
+        transformedSales = await enrichSalesWithProdutos(transformedSales);
+
         console.log('Vendas carregadas com sucesso:', transformedSales.length);
         setSales(transformedSales);
         setDbStatus('connected');
@@ -187,6 +230,7 @@ const Index = () => {
                 .eq('id', saleId)
                 .single();
               if (error) { console.error('Realtime fetch error (products):', error); setDbStatus('error'); return; }
+
               const transformedSale: Sale = {
                 id: data.id,
                 customerName: data.customer_name,
@@ -207,11 +251,101 @@ const Index = () => {
                   saleValue: product.sale_value
                 })) : []
               };
+
+              // Se o relation 'products' não traz dados, tenta buscar na tabela 'produtos' (compatibilidade)
+              if (!transformedSale.products || transformedSale.products.length === 0) {
+                try {
+                  const { data: altProducts } = await supabase
+                    .from('produtos')
+                    .select('*')
+                    .eq('id_da_venda', saleId);
+
+                  if (altProducts && altProducts.length > 0) {
+                    transformedSale.products = altProducts.map((p: any) => ({
+                      id: p.id,
+                      productRef: p.product_ref ?? p.referencia_do_produto ?? p['referência_do_produto'] ?? null,
+                      productName: p.product_name ?? p.nome_do_produto ?? p['nome_do_produto'] ?? null,
+                      purchaseValue: Number(String(p.purchase_value ?? p.valor_de_compra ?? 0).replace(',', '.')),
+                      saleValue: Number(String(p.sale_value ?? p.valor_de_venda ?? 0).replace(',', '.')),
+                    }));
+                  }
+                } catch (e) {
+                  console.warn('Erro ao buscar produtos em tabela `produtos` no realtime:', e);
+                }
+              }
+
               setSales(prev => prev.map(s => s.id === transformedSale.id ? transformedSale : s));
               setDbStatus('connected');
               toast({ title: "Produtos sincronizados", description: "Atualização em tempo real aplicada." });
             } catch (err) {
               console.error('Erro no realtime products:', err);
+              setDbStatus('error');
+            }
+          })
+
+          // Também escuta mudanças na tabela `produtos` (compatibilidade com nomes PT em produção)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'produtos' }, async (payload: any) => {
+            try {
+              const saleId = payload.new?.id_da_venda || payload.old?.id_da_venda;
+              if (!saleId) return;
+
+              // Buscar venda + products (se existir) e complementar com tabela `produtos` se necessário
+              const { data, error } = await supabase
+                .from('sales')
+                .select(`*, products (*)`)
+                .eq('id', saleId)
+                .single();
+
+              if (error) { console.error('Realtime fetch error (produtos):', error); setDbStatus('error'); return; }
+
+              const transformedSale: Sale = {
+                id: data.id,
+                customerName: data.customer_name,
+                purchaseDate: data.purchase_date,
+                paymentDate: data.payment_date,
+                paymentMethod: data.payment_method as "pix" | "installment",
+                installments: data.installments,
+                installmentValues: Array.isArray(data.installment_values) ? (data.installment_values as number[]) : [],
+                installmentDates: Array.isArray(data.installment_dates) ? (data.installment_dates as string[]) : [],
+                installmentType: (data as any).installment_type as "mensal" | "quinzenal" | undefined,
+                advancePayment: data.advance_payment,
+                discount: 0,
+                products: data.products ? data.products.map((product: any) => ({
+                  id: product.id,
+                  productRef: product.product_ref,
+                  productName: product.product_name,
+                  purchaseValue: product.purchase_value,
+                  saleValue: product.sale_value
+                })) : []
+              };
+
+              // Se ainda não recebeu produtos via relation, busca na tabela `produtos`
+              if (!transformedSale.products || transformedSale.products.length === 0) {
+                try {
+                  const { data: altProducts } = await supabase
+                    .from('produtos')
+                    .select('*')
+                    .eq('id_da_venda', saleId);
+
+                  if (altProducts && altProducts.length > 0) {
+                    transformedSale.products = altProducts.map((p: any) => ({
+                      id: p.id,
+                      productRef: p.product_ref ?? p.referencia_do_produto ?? p['referência_do_produto'] ?? null,
+                      productName: p.product_name ?? p.nome_do_produto ?? p['nome_do_produto'] ?? null,
+                      purchaseValue: Number(String(p.purchase_value ?? p.valor_de_compra ?? 0).replace(',', '.')),
+                      saleValue: Number(String(p.sale_value ?? p.valor_de_venda ?? 0).replace(',', '.')),
+                    }));
+                  }
+                } catch (e) {
+                  console.warn('Erro ao buscar produtos em tabela `produtos` no realtime (alt):', e);
+                }
+              }
+
+              setSales(prev => prev.map(s => s.id === transformedSale.id ? transformedSale : s));
+              setDbStatus('connected');
+              toast({ title: "Produtos sincronizados", description: "Atualização em tempo real aplicada (produtos)." });
+            } catch (err) {
+              console.error('Erro no realtime produtos:', err);
               setDbStatus('error');
             }
           })
@@ -313,6 +447,44 @@ const Index = () => {
           });
         } else {
           console.log('✅ Products inserted successfully');
+
+          // Buscar a venda com produtos para atualizar o estado imediatamente
+          try {
+            const { data: saleWithProducts, error: fetchErr } = await supabase
+              .from('sales')
+              .select(`*, products (*)`)
+              .eq('id', saleId)
+              .single();
+
+            if (fetchErr) {
+              console.error('❌ Error fetching sale with products after insert:', fetchErr);
+            } else if (saleWithProducts) {
+              const updatedSale: Sale = {
+                id: saleWithProducts.id,
+                customerName: saleWithProducts.customer_name,
+                purchaseDate: saleWithProducts.purchase_date,
+                paymentDate: saleWithProducts.payment_date,
+                paymentMethod: saleWithProducts.payment_method as "pix" | "installment",
+                installments: saleWithProducts.installments,
+                installmentValues: Array.isArray(saleWithProducts.installment_values) ? (saleWithProducts.installment_values as number[]) : [],
+                installmentDates: Array.isArray(saleWithProducts.installment_dates) ? (saleWithProducts.installment_dates as string[]) : [],
+                installmentType: (saleWithProducts as any).installment_type as "mensal" | "quinzenal" | undefined,
+                advancePayment: saleWithProducts.advance_payment,
+                discount: 0,
+                products: saleWithProducts.products ? saleWithProducts.products.map((p: any) => ({
+                  id: p.id,
+                  productRef: p.product_ref,
+                  productName: p.product_name,
+                  purchaseValue: p.purchase_value,
+                  saleValue: p.sale_value,
+                })) : []
+              };
+
+              setSales(prev => prev.map(s => s.id === saleId ? updatedSale : s));
+            }
+          } catch (err) {
+            console.error('Erro ao buscar venda com produtos após inserção:', err);
+          }
         }
       }
 
