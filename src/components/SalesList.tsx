@@ -26,11 +26,10 @@ interface SalesListProps {
   onDeleteSale: (saleId: string) => void;
   onEditSale: (sale: Sale) => void;
   onUpdateSale?: (sale: Partial<Sale> & { id: string }) => void | Promise<void>;
-  selectedMonth?: string;
-  hideValues?: boolean;
+    selectedMonth?: string; // Make selectedMonth optional
 }
 
-export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale, selectedMonth, hideValues }: SalesListProps) => {
+export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale, selectedMonth }: SalesListProps) => {
   if (sales.length === 0) {
     return (
       <Card className="w-full shadow-lg rounded-xl border">
@@ -195,8 +194,8 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale, selec
                         {(() => {
                           if (!Array.isArray(sale.installmentDates)) return `0/${sale.installments} parcelas`;
                           const now = new Date();
-                          const paid = sale.installmentDates.filter(d => d !== null && d !== undefined && new Date(d) < now).length;
-                          return `${paid}/${sale.installments} parcelas`;
+                          const remaining = sale.installmentDates.filter(d => !d || new Date(d) > now).length;
+                          return `${remaining}/${sale.installments} parcelas`;
                         })()}
                       </span>
                     )}
@@ -207,7 +206,7 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale, selec
                       <DollarSign className="w-5 h-5 text-primary mt-1" />
                       <div>
                         <p className="text-xs text-muted-foreground">Valor Total de Compra</p>
-                        <p className="text-lg font-semibold text-foreground">{hideValues ? 'R$ ••••••' : `R$ ${totalPurchaseValue.toFixed(2)}`}</p>
+                        <p className="text-lg font-semibold text-foreground">R$ {totalPurchaseValue.toFixed(2)}</p>
                       </div>
                     </div>
 
@@ -216,7 +215,7 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale, selec
                       <div>
                         <p className="text-xs text-muted-foreground">Lucro Total</p>
                         <p className={`text-lg font-semibold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {hideValues ? 'R$ ••••••' : `R$ ${profit.toFixed(2)}`}
+                          R$ {profit.toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -323,16 +322,16 @@ export const SalesList = ({ sales, onDeleteSale, onEditSale, onUpdateSale, selec
                                 <div className="flex items-center gap-4 shrink-0">
                                   <div className="text-right">
                                     <p className="text-xs text-muted-foreground">Compra</p>
-                                    <p className="font-medium text-foreground">{hideValues ? 'R$ ••••••' : `R$ ${product.purchaseValue.toFixed(2)}`}</p>
+                                    <p className="font-medium text-foreground">R$ {product.purchaseValue.toFixed(2)}</p>
                                   </div>
                                   <div className="text-right">
                                     <p className="text-xs text-muted-foreground">Venda</p>
-                                    <p className="font-medium text-foreground">{hideValues ? 'R$ ••••••' : `R$ ${product.saleValue.toFixed(2)}`}</p>
+                                    <p className="font-medium text-foreground">R$ {product.saleValue.toFixed(2)}</p>
                                   </div>
                                   <div className="text-right min-w-[100px]">
                                     <p className="text-xs text-muted-foreground">Lucro</p>
                                     <p className={`font-medium ${productProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                      {hideValues ? 'R$ ••••••' : `R$ ${productProfit.toFixed(2)}`}
+                                      R$ {productProfit.toFixed(2)}
                                     </p>
                                   </div>
                                 </div>

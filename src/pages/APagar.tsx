@@ -69,6 +69,41 @@ const APagar = () => {
           })) : []
         }));
 
+        // Compat: se não veio products, tentar buscar na tabela 'produtos' (nomes PT em produção)
+        try {
+          const saleIds = transformedSales.map(s => s.id).filter(Boolean);
+          if (saleIds.length > 0) {
+            const { data: altProducts } = await supabase
+              .from('produtos')
+              .select('*')
+              .in('id_da_venda', saleIds as string[]);
+
+            if (altProducts && altProducts.length > 0) {
+              const mapBySale: Record<string, any[]> = {};
+              altProducts.forEach((r: any) => {
+                const sid = r.sale_id ?? r.id_da_venda ?? r['id_da_venda'] ?? null;
+                if (!sid) return;
+                if (!mapBySale[sid]) mapBySale[sid] = [];
+                mapBySale[sid].push({
+                  id: r.id,
+                  productRef: r.product_ref ?? r.referencia_do_produto ?? r['referência_do_produto'] ?? null,
+                  productName: r.product_name ?? r.nome_do_produto ?? r['nome_do_produto'] ?? null,
+                  purchaseValue: Number(String(r.purchase_value ?? r.valor_de_compra ?? 0).replace(',', '.')),
+                  saleValue: Number(String(r.sale_value ?? r.valor_de_venda ?? 0).replace(',', '.')),
+                });
+              });
+
+              // Attach
+              for (const s of transformedSales) {
+                if ((!s.products || s.products.length === 0) && mapBySale[s.id]) {
+                  s.products = mapBySale[s.id];
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Erro ao buscar produtos na tabela `produtos` (APagar):', e);
+        }
 
         setSales(transformedSales);
       } catch (error) {
