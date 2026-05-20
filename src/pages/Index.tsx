@@ -382,6 +382,7 @@ const Index = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("total");
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [hideValues, setHideValues] = useState(false);
 
   // Removed localStorage persistence since we're usando Supabase agora
 
