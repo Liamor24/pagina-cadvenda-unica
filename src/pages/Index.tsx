@@ -131,7 +131,7 @@ const Index = () => {
   // Realtime updates de vendas e produtos com reconnect automático
   useEffect(() => {
     let channel: any = null;
-    let reconnectInterval: NodeJS.Timeout | null = null;
+    let reconnectInterval: ReturnType<typeof setInterval> | null = null;
     let isSubscribed = true;
 
     const setupRealtimeChannel = async () => {
@@ -228,72 +228,8 @@ const Index = () => {
             }
           })
 
-          // Também escuta mudanças na tabela `produtos` (compatibilidade com nomes PT em produção)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'produtos' }, async (payload: any) => {
-            try {
-              const saleId = payload.new?.id_da_venda || payload.old?.id_da_venda;
-              if (!saleId) return;
 
-              // Buscar venda + products (se existir) e complementar com tabela `produtos` se necessário
-              const { data, error } = await supabase
-                .from('sales')
-                .select(`*, products (*)`)
-                .eq('id', saleId)
-                .single();
 
-              if (error) { console.error('Realtime fetch error (produtos):', error); setDbStatus('error'); return; }
-
-              const transformedSale: Sale = {
-                id: data.id,
-                customerName: data.customer_name,
-                purchaseDate: data.purchase_date,
-                paymentDate: data.payment_date,
-                paymentMethod: data.payment_method as "pix" | "installment",
-                installments: data.installments,
-                installmentValues: Array.isArray(data.installment_values) ? (data.installment_values as number[]) : [],
-                installmentDates: Array.isArray(data.installment_dates) ? (data.installment_dates as string[]) : [],
-                installmentType: (data as any).installment_type as "mensal" | "quinzenal" | undefined,
-                advancePayment: data.advance_payment,
-                discount: 0,
-                products: data.products ? data.products.map((product: any) => ({
-                  id: product.id,
-                  productRef: product.product_ref,
-                  productName: product.product_name,
-                  purchaseValue: product.purchase_value,
-                  saleValue: product.sale_value
-                })) : []
-              };
-
-              // Se ainda não recebeu produtos via relation, busca na tabela `produtos`
-              if (!transformedSale.products || transformedSale.products.length === 0) {
-                try {
-                  const { data: altProducts } = await supabase
-                    .from('produtos')
-                    .select('*')
-                    .eq('id_da_venda', saleId);
-
-                  if (altProducts && altProducts.length > 0) {
-                    transformedSale.products = altProducts.map((p: any) => ({
-                      id: p.id,
-                      productRef: p.product_ref ?? p.referencia_do_produto ?? p['referência_do_produto'] ?? null,
-                      productName: p.product_name ?? p.nome_do_produto ?? p['nome_do_produto'] ?? null,
-                      purchaseValue: Number(String(p.purchase_value ?? p.valor_de_compra ?? 0).replace(',', '.')),
-                      saleValue: Number(String(p.sale_value ?? p.valor_de_venda ?? 0).replace(',', '.')),
-                    }));
-                  }
-                } catch (e) {
-                  console.warn('Erro ao buscar produtos em tabela `produtos` no realtime (alt):', e);
-                }
-              }
-
-              setSales(prev => prev.map(s => s.id === transformedSale.id ? transformedSale : s));
-              setDbStatus('connected');
-              toast({ title: "Produtos sincronizados", description: "Atualização em tempo real aplicada (produtos)." });
-            } catch (err) {
-              console.error('Erro no realtime produtos:', err);
-              setDbStatus('error');
-            }
-          })
           .subscribe((status) => {
             console.log('[Realtime] Status:', status);
             if (status === 'SUBSCRIBED') {
