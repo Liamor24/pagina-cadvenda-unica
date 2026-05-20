@@ -216,27 +216,8 @@ const Index = () => {
                 })) : []
               };
 
-              // Se o relation 'products' não traz dados, tenta buscar na tabela 'produtos' (compatibilidade)
-              if (!transformedSale.products || transformedSale.products.length === 0) {
-                try {
-                  const { data: altProducts } = await supabase
-                    .from('produtos')
-                    .select('*')
-                    .eq('id_da_venda', saleId);
 
-                  if (altProducts && altProducts.length > 0) {
-                    transformedSale.products = altProducts.map((p: any) => ({
-                      id: p.id,
-                      productRef: p.product_ref ?? p.referencia_do_produto ?? p['referência_do_produto'] ?? null,
-                      productName: p.product_name ?? p.nome_do_produto ?? p['nome_do_produto'] ?? null,
-                      purchaseValue: Number(String(p.purchase_value ?? p.valor_de_compra ?? 0).replace(',', '.')),
-                      saleValue: Number(String(p.sale_value ?? p.valor_de_venda ?? 0).replace(',', '.')),
-                    }));
-                  }
-                } catch (e) {
-                  console.warn('Erro ao buscar produtos em tabela `produtos` no realtime:', e);
-                }
-              }
+
 
               setSales(prev => prev.map(s => s.id === transformedSale.id ? transformedSale : s));
               setDbStatus('connected');
