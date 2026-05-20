@@ -49,7 +49,7 @@ const Index = () => {
       const saleIds = salesArray.map(s => s.id).filter(Boolean);
       if (saleIds.length === 0) return salesArray;
 
-      const { data: produtosRows, error: prodErr } = await supabase
+      const { data: produtosRows, error: prodErr } = await (supabase as any)
         .from('produtos')
         .select('*')
         .in('id_da_venda', saleIds as string[]);
