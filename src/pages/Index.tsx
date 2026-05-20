@@ -448,7 +448,7 @@ const Index = () => {
           installment_type: merged.installmentType ?? null,
           advance_payment: merged.advancePayment ?? null,
           discount: merged.discount ?? null,
-        })
+        } as any)
         .eq('id', merged.id)
         .select()
         .single();
