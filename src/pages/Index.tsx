@@ -167,7 +167,7 @@ const Index = () => {
   // Realtime updates de vendas e produtos com reconnect automático
   useEffect(() => {
     let channel: any = null;
-    let reconnectInterval: NodeJS.Timeout | null = null;
+    let reconnectInterval: ReturnType<typeof setInterval> | null = null;
     let isSubscribed = true;
 
     const setupRealtimeChannel = async () => {
