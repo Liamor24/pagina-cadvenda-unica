@@ -255,7 +255,7 @@ const Index = () => {
               // Se o relation 'products' não traz dados, tenta buscar na tabela 'produtos' (compatibilidade)
               if (!transformedSale.products || transformedSale.products.length === 0) {
                 try {
-                  const { data: altProducts } = await supabase
+                  const { data: altProducts } = await (supabase as any)
                     .from('produtos')
                     .select('*')
                     .eq('id_da_venda', saleId);
