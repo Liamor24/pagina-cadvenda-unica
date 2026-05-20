@@ -936,31 +936,34 @@ const Index = () => {
           </div>
         )}
 
+        {/* Botão ocultar/mostrar valores (sempre visível) */}
+        <div className="max-w-4xl mx-auto mb-3 flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setHideValues(v => !v)}
+            title={hideValues ? "Mostrar valores" : "Ocultar valores"}
+            className="gap-2"
+          >
+            {hideValues ? (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+                Mostrar valores
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                Ocultar valores
+              </>
+            )}
+          </Button>
+        </div>
+
         {/* Statistics Cards */}
         {sales.length > 0 && (
           <div className="max-w-4xl mx-auto mb-8">
-            <div className="flex justify-end mb-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setHideValues(v => !v)}
-                title={hideValues ? "Mostrar valores" : "Ocultar valores"}
-                className="gap-2"
-              >
-                {hideValues ? (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
-                    Mostrar valores
-                  </>
-                ) : (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                    Ocultar valores
-                  </>
-                )}
-              </Button>
-            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+
             <div className="bg-gradient-to-br from-violet-50 to-fuchsia-50 dark:from-violet-950/30 dark:to-fuchsia-950/30 p-6 rounded-2xl shadow-lg border border-violet-100/50 dark:border-violet-800/30 text-center group hover:scale-105 transition-transform">
               <p className="text-sm font-semibold text-violet-700 dark:text-violet-300 mb-2 group-hover:text-violet-800 transition-colors">Total de Vendas</p>
               <p className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">{filteredSales.length}</p>
