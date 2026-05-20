@@ -322,7 +322,7 @@ const Index = () => {
               // Se ainda não recebeu produtos via relation, busca na tabela `produtos`
               if (!transformedSale.products || transformedSale.products.length === 0) {
                 try {
-                  const { data: altProducts } = await supabase
+                  const { data: altProducts } = await (supabase as any)
                     .from('produtos')
                     .select('*')
                     .eq('id_da_venda', saleId);
