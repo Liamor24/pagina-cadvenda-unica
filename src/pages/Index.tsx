@@ -555,7 +555,7 @@ const Index = () => {
       console.log('📦 Dados mesclados para update:', merged);
 
       // Atualizar venda com retorno para confirmar persistência
-      let { data: updatedRow, error: saleError } = await supabase
+      let { data: updatedRow, error: saleError } = await (supabase as any)
         .from('sales')
         .update({
           customer_name: merged.customerName,
