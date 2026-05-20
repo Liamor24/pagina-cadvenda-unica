@@ -73,7 +73,7 @@ const APagar = () => {
         try {
           const saleIds = transformedSales.map(s => s.id).filter(Boolean);
           if (saleIds.length > 0) {
-            const { data: altProducts } = await supabase
+            const { data: altProducts } = await (supabase as any)
               .from('produtos')
               .select('*')
               .in('id_da_venda', saleIds as string[]);
