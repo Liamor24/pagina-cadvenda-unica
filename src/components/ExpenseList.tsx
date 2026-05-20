@@ -37,10 +37,10 @@ const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: ExpenseListPr
       "Outros": { variant: "secondary", className: "" }
     };
 
-    const config = variants[categoria];
+    const config = variants[categoria] ?? { variant: "secondary" as const, className: "" };
     return (
       <Badge variant={config.variant} className={config.className}>
-        {categoria}
+        {categoria || "Sem categoria"}
       </Badge>
     );
   };
