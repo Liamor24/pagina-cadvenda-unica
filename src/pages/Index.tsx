@@ -43,44 +43,8 @@ const Index = () => {
     }));
   };
 
-  // Helper: tenta carregar produtos a partir de uma tabela alternativa chamada 'produtos' (compatibilidade com produção)
-  const enrichSalesWithProdutos = async (salesArray: any[]) => {
-    try {
-      const saleIds = salesArray.map(s => s.id).filter(Boolean);
-      if (saleIds.length === 0) return salesArray;
+  const enrichSalesWithProdutos = async (salesArray: any[]) => salesArray;
 
-      const { data: produtosRows, error: prodErr } = await supabase
-        .from('produtos')
-        .select('*')
-        .in('id_da_venda', saleIds as string[]);
-
-      if (prodErr) {
-        // Se tabela 'produtos' não existir, apenas retorna
-        console.warn('Tabela `produtos` não disponível ou erro ao buscar:', prodErr.message ?? prodErr);
-        return salesArray;
-      }
-
-      const mapBySale: Record<string, any[]> = {};
-      (produtosRows || []).forEach((r: any) => {
-        const saleId = r.sale_id ?? r.id_da_venda ?? r['id_da_venda'] ?? r['id da venda'] ?? null;
-        if (!saleId) return;
-        const product = {
-          id: r.id,
-          productRef: r.product_ref ?? r.referencia_do_produto ?? r['referência_do_produto'] ?? r['referencia_do_produto'] ?? null,
-          productName: r.product_name ?? r.nome_do_produto ?? r['nome do produto'] ?? r['nome_do_produto'] ?? null,
-          purchaseValue: Number(String(r.purchase_value ?? r.valor_de_compra ?? r['valor_de_compra'] ?? r['valor de compra'] ?? 0).replace(',', '.')),
-          saleValue: Number(String(r.sale_value ?? r.valor_de_venda ?? r['valor_de_venda'] ?? r['valor de venda'] ?? 0).replace(',', '.')),
-        };
-        if (!mapBySale[saleId]) mapBySale[saleId] = [];
-        mapBySale[saleId].push(product);
-      });
-
-      return salesArray.map(s => ({ ...s, products: (s.products && s.products.length > 0) ? s.products : (mapBySale[s.id] || []) }));
-    } catch (err) {
-      console.error('Erro ao enriquecer vendas com produtos (produtos):', err);
-      return salesArray;
-    }
-  };
 
   // Fetch sales from Supabase with retry logic
   useEffect(() => {
